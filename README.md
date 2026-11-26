@@ -1,6 +1,8 @@
 # Jarvis AI Agent
 
-**A multi-agent AI system that writes a daily AI brief, checks its own work, and runs on its own every morning.**
+**A multi-agent AI system that does my daily AI research for me: it writes a brief, checks its own work, and runs on its own every morning.**
+Keeping up with AI tools, model releases, funding and India's startup news takes hours. Jarvis reads the sources, picks
+what's worth my time, and says in one line why each story matters, so I can decide in seconds what to read, try or note.
 Two AI agents research and write, a different AI model reviews their drafts, and plain code decides when the work is
 really done. Every report is published with its report card, and any failed check sends an alert saying where.
 
@@ -12,8 +14,9 @@ really done. Every report is published with its report card, and any failed chec
 
 | | |
 |---|---|
+| **The problem it solves** | Keeping up with the AI industry means hours of research across many sites every day. Jarvis does that research: it picks the stories worth an engineer's time and explains why each one matters, so the reader can decide fast whether to read the article, try the tool or note the funding, instead of scrolling for an hour. |
 | **What it does** | Reads 7 sources (Product Hunt, Hacker News, TechCrunch, VentureBeat, YourStory, Inc42, Business Standard) and writes three short sections for an engineer who builds with AI: **AI & developer tools**, **AI industry news**, **India tech & startups**. Each pick gets one or two plain lines on why it matters. |
-| **The hard part it solves** | AI agents sound confident, say they're done when they aren't, and quietly make things up. Jarvis is built so it can't publish unchecked work, and when something breaks it recovers or says exactly where it broke. |
+| **The hard part** | AI agents sound confident, say they're done when they aren't, and quietly make things up. Jarvis is built so it can't publish unchecked work, and when something breaks it recovers or says exactly where it broke. |
 | **Ask Jarvis** | A chat on the website that answers from the reports only, with sources, and remembers the conversation ("tell me more about the second one"). Retrieval runs in the browser; optionally a 1.5B model (WebLLM, on WebGPU) writes the answer on the visitor's own device, and code rejects any answer that doesn't cite a real story. |
 
 ### How it maps to building conversational AI
