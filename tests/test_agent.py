@@ -12,7 +12,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 
 from jarvis_agent import agent, email_sender, evaluator, fetchers, gemini, harness, legacy, tools  # noqa: E402
-from jarvis_agent.config import DESK_MODEL, EVALUATOR_BACKUP, EVALUATOR_MODEL, MAX_STEPS, RESERVE_MODEL  # noqa: E402
+from jarvis_agent.config import DESK_MODEL, EVALUATOR_BACKUP, EVALUATOR_MODEL, EVALUATOR_MODELS, MAX_STEPS, RESERVE_MODEL  # noqa: E402
 from jarvis_agent.desks import GLOBAL, INDIA  # noqa: E402
 from jarvis_agent.store import Memory  # noqa: E402
 
@@ -65,7 +65,7 @@ EVAL_CALLS = []
 
 def fake_ask_json(model, prompt, system=None, tries=5):
     EVAL_CALLS.append(model)
-    if FAKE_EVALUATOR_DOWN and model == EVALUATOR_MODEL:
+    if FAKE_EVALUATOR_DOWN and model in EVALUATOR_MODELS:
         raise gemini.GeminiError("HTTP 503 overloaded")
     score = 2 if "why: WEAK" in prompt else 4
     return {"rubric": {k: {"score": score, "evidence": "fake"} for k in evaluator.RUBRIC},
@@ -189,6 +189,7 @@ SCRIPTS.update({("global", "writer"): global_script(first_why=WHY), ("india", "w
 email, urls, trace, report = harness.run(new_memory(), log=quiet)
 i = trace["desks"][1]
 check("crashed desk is handed to the reserve", i["written_by"] == "reserve" and i["attempts"][1]["model"] == RESERVE_MODEL)
+check("a recovered crash does not fail the run", report.passed)
 check("report card records the crash and the recovery",
       any("India desk: writer" in c["check"] and not c["passed"] and "crashed" in c["evidence"] for c in report.checks)
       and any("India desk: reserve" in c["check"] and c["passed"] for c in report.checks))

@@ -13,7 +13,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 from . import fetchers, legacy
 from .agent import run_desk
-from .config import DESK_MODEL, RESERVE_MODEL
+from .config import DESK_MODEL, RESERVE_MODELS
 from .desks import DESKS, SECTION_TITLES
 from .tools import DIGEST_KEYS, LEGACY_SECTION, SOURCES, done_check
 
@@ -26,13 +26,14 @@ class ReportCard:
     def __init__(self):
         self.checks = []
 
-    def add(self, name, passed, evidence=""):
-        self.checks.append({"check": name, "passed": bool(passed), "evidence": str(evidence)[:400]})
+    def add(self, name, passed, evidence="", final=True):
+        """final=False marks an attempt the harness can still recover from (shown as RETRIED if it failed)."""
+        self.checks.append({"check": name, "passed": bool(passed), "final": final, "evidence": str(evidence)[:400]})
         return passed
 
     @property
     def passed(self):
-        return all(c["passed"] for c in self.checks)
+        return all(c["passed"] for c in self.checks if c.get("final", True))
 
 
 def _legacy_for_desk(desk, memory, state):
@@ -81,23 +82,24 @@ def _rows_from_state(state, digest):
 def run_desk_with_backups(desk, memory, report, log):
     """Writer -> (done-check) -> reserve -> (done-check) -> old pipeline. Returns the desk's outcome."""
     attempts = []
-    for role, model in (("writer", DESK_MODEL), ("reserve", RESERVE_MODEL)):
-        state = run_desk(desk, memory, model, log, role=role, tries=5 if role == "writer" else 3)
+    for role, model in [("writer", DESK_MODEL)] + [("reserve", m) for m in RESERVE_MODELS if m != DESK_MODEL]:
+        state = run_desk(desk, memory, model, log, role=role, tries=5 if role == "writer" else 2)
         missing = done_check(state)
         if state.error:
             missing = [f"crashed: {state.error}"] + missing
         attempts.append({"role": role, "state": state, "missing": missing})
         if report.add(f"{desk.title}: {role} ({model}) met its contract", not missing,
-                      "all conditions met" if not missing else "; ".join(missing)):
+                      "all conditions met" if not missing else "; ".join(missing), final=False):
             digest = state.final_digest()
+            report.add(f"{desk.title} delivered its sections", True, f"written by the {role} ({model})")
             return {"desk": desk, "source": role, "state": state, "attempts": attempts,
                     "rows": _rows_from_state(state, digest), "notes": digest.get("notes") or {}}
         log(f"  [{desk.key}] {role} did not meet its contract: {missing[:2]}")
-    log(f"  [{desk.key}] both writers failed; running the old pipeline for this desk")
+    log(f"  [{desk.key}] all writers failed; running the old pipeline for this desk")
     best = max((a["state"] for a in attempts), key=lambda s: len(s.items))
     data = _legacy_for_desk(desk, memory, best)
-    report.add(f"{desk.title}: old pipeline produced its sections", data is not None,
-               "fallback used" if data else "fallback also failed")
+    report.add(f"{desk.title} delivered its sections", data is not None,
+               "written by the old pipeline (all agent writers failed)" if data else "old pipeline also failed")
     if not data:
         return {"desk": desk, "source": "failed", "state": best, "attempts": attempts,
                 "rows": {k: [] for k in desk.sections},
@@ -141,7 +143,7 @@ def run(memory, log=print):
         raise RuntimeError("no section could be produced")
 
     trace = {"seconds": round(time.time() - started), "desks": [_desk_trace(oc) for oc in outcomes],
-             "report_card": report.checks, "models": {"desk": DESK_MODEL, "reserve": RESERVE_MODEL}}
+             "report_card": report.checks, "models": {"desk": DESK_MODEL, "reserve": RESERVE_MODELS}}
     return email, urls, trace, report
 
 

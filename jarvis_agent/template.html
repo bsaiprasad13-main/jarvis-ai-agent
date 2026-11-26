@@ -148,8 +148,9 @@
             Evaluator: {% for x in a.drafts %}draft {{ loop.index }} {{ x.score }}/10{% if x.accepted %} ✓{% else %} ✗{% endif %}{% if not loop.last %}, {% endif %}{% endfor %}.{% endif %}
         </p>
         {% endfor %}
-        {% set passed = trace.report_card|selectattr('passed')|list|length %}
-        <p style="margin:6px 0 0 0;">Harness checks: {{ passed }}/{{ trace.report_card|length }} passed · {{ trace.seconds }}s.</p>
+        {% set finals = trace.report_card|rejectattr('final', 'sameas', false)|list %}
+        {% set retried = trace.report_card|selectattr('final', 'sameas', false)|rejectattr('passed')|list %}
+        <p style="margin:6px 0 0 0;">Harness checks: {{ finals|selectattr('passed')|list|length }}/{{ finals|length }} passed{% if retried %}, {{ retried|length }} failure{{ 's' if retried|length > 1 }} recovered automatically{% endif %} · {{ trace.seconds }}s.</p>
     </div>
     {% endif %}
 

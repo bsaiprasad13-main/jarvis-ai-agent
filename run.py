@@ -38,7 +38,9 @@ def publish_site_data(stamp, email, trace, mode):
     index = [r for r in index if r["id"] != stamp] + [{
         "id": stamp, "kind": "agent", "mode": mode, "file": f"data/{stamp}.json",
         "stories": sum(len(email.get(k, [])) for k in ("section_1_tools", "section_2_ai_news", "section_3_india_news")),
-        "checks_passed": sum(c["passed"] for c in trace["report_card"]), "checks": len(trace["report_card"])}]
+        "checks_passed": sum(c["passed"] for c in trace["report_card"] if c.get("final", True)),
+        "checks": sum(1 for c in trace["report_card"] if c.get("final", True)),
+        "recoveries": sum(1 for c in trace["report_card"] if not c.get("final", True) and not c["passed"])}]
     with open(index_file, "w", encoding="utf-8") as f:
         json.dump(sorted(index, key=lambda r: r["id"]), f, indent=1)
     with open(run_file, encoding="utf-8") as f:          # read back
@@ -89,7 +91,8 @@ def main(dry_run, save_memory):
 
     print("\nReport card:")
     for c in report.checks:
-        print(f"  {'PASS' if c['passed'] else 'FAIL'}  {c['check']}  ({c['evidence'][:110]})")
+        tag = "PASS" if c["passed"] else ("FAIL" if c.get("final", True) else "RETRIED")
+        print(f"  {tag:7} {c['check']}  ({c['evidence'][:110]})")
     for d in trace["desks"]:
         for a in d["attempts"]:
             scores = " -> ".join(f"{x['score']}/10" for x in a["drafts"])

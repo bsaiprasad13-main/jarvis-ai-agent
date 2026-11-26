@@ -11,7 +11,7 @@ Two layers:
    and an average of at least 3.5 (shown as 7/10).
 """
 from . import gemini
-from .config import EVALUATOR_BACKUP, EVALUATOR_MODEL
+from .config import EVALUATOR_BACKUP, EVALUATOR_MODELS
 from .desks import SECTION_BRIEFS
 
 READER = ("a final-year engineering student moving into product management, "
@@ -113,9 +113,14 @@ CANDIDATES NOT USED:
 
 def llm_review(state, digest):
     prompt = _prompt(state, digest)
-    try:
-        res, model = gemini.ask_json(EVALUATOR_MODEL, prompt, tries=2), EVALUATOR_MODEL
-    except gemini.GeminiError:
+    res = model = None
+    for candidate in [m for m in EVALUATOR_MODELS if m != state.model]:   # never the writer's own model
+        try:
+            res, model = gemini.ask_json(candidate, prompt, tries=2), candidate
+            break
+        except gemini.GeminiError:
+            continue
+    if res is None:
         res, model = gemini.ask_json(EVALUATOR_BACKUP, prompt), EVALUATOR_BACKUP
     rubric = {}
     for k in RUBRIC:
