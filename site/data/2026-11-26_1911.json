@@ -15,7 +15,7 @@
    {
     "title": "Hub: Run 100 Claude Code or Codex sessions concurrently",
     "source": "Product Hunt",
-    "link": "https://www.producthunt.com/products/hub-20?utm_campaign=producthunt-api&utm_medium=api-v2&utm_source=Application%3A+PM+AI+NEWS+AGENT+%28ID%3A+297294%29",
+    "link": "https://www.producthunt.com/products/hub-20",
     "why_it_matters": "Allows developers to scale up parallel AI coding agent sessions like Claude Code or Codex to handle massive refactoring or testing tasks concurrently across environments.",
     "item_id": "g1",
     "read": false,
@@ -24,7 +24,7 @@
    {
     "title": "QA.tech MCP: Verify IDE code changes with automated QA agents",
     "source": "Product Hunt",
-    "link": "https://www.producthunt.com/products/qa-tech?utm_campaign=producthunt-api&utm_medium=api-v2&utm_source=Application%3A+PM+AI+NEWS+AGENT+%28ID%3A+297294%29",
+    "link": "https://www.producthunt.com/products/qa-tech",
     "why_it_matters": "Brings automated QA agents directly into your Model Context Protocol (MCP) workflow, letting you test and verify code changes straight from your IDE.",
     "item_id": "g2",
     "read": false,
@@ -33,7 +33,7 @@
    {
     "title": "Remora: A long-term memory layer built for AI agents",
     "source": "Product Hunt",
-    "link": "https://www.producthunt.com/products/remora-6?utm_campaign=producthunt-api&utm_medium=api-v2&utm_source=Application%3A+PM+AI+NEWS+AGENT+%28ID%3A+297294%29",
+    "link": "https://www.producthunt.com/products/remora-6",
     "why_it_matters": "Provides developers building custom AI agents with a plug-and-play memory architecture to maintain context and state over extended task horizons.",
     "item_id": "g9",
     "read": false,
@@ -128,7 +128,7 @@
       {
        "title": "Hub: Run 100 Claude Code or Codex sessions concurrently",
        "source": "Product Hunt",
-       "link": "https://www.producthunt.com/products/hub-20?utm_campaign=producthunt-api&utm_medium=api-v2&utm_source=Application%3A+PM+AI+NEWS+AGENT+%28ID%3A+297294%29",
+       "link": "https://www.producthunt.com/products/hub-20",
        "why_it_matters": "Allows developers to scale up parallel AI coding agent sessions like Claude Code or Codex to handle massive refactoring or testing tasks concurrently across environments.",
        "item_id": "g1",
        "read": false,
@@ -137,7 +137,7 @@
       {
        "title": "QA.tech MCP: Verify IDE code changes with automated QA agents",
        "source": "Product Hunt",
-       "link": "https://www.producthunt.com/products/qa-tech?utm_campaign=producthunt-api&utm_medium=api-v2&utm_source=Application%3A+PM+AI+NEWS+AGENT+%28ID%3A+297294%29",
+       "link": "https://www.producthunt.com/products/qa-tech",
        "why_it_matters": "Brings automated QA agents directly into your Model Context Protocol (MCP) workflow, letting you test and verify code changes straight from your IDE.",
        "item_id": "g2",
        "read": false,
@@ -146,7 +146,7 @@
       {
        "title": "Remora: A long-term memory layer built for AI agents",
        "source": "Product Hunt",
-       "link": "https://www.producthunt.com/products/remora-6?utm_campaign=producthunt-api&utm_medium=api-v2&utm_source=Application%3A+PM+AI+NEWS+AGENT+%28ID%3A+297294%29",
+       "link": "https://www.producthunt.com/products/remora-6",
        "why_it_matters": "Provides developers building custom AI agents with a plug-and-play memory architecture to maintain context and state over extended task horizons.",
        "item_id": "g9",
        "read": false,

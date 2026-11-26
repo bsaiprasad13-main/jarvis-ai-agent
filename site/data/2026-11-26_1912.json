@@ -15,7 +15,7 @@
    {
     "title": "DeskFleet",
     "source": "Product Hunt",
-    "link": "https://www.producthunt.com/products/deskfleet?utm_campaign=producthunt-api&utm_medium=api-v2&utm_source=Application%3A+PM+AI+NEWS+AGENT+%28ID%3A+297294%29",
+    "link": "https://www.producthunt.com/products/deskfleet",
     "why_it_matters": "Allows engineering teams to coordinate and run coding agents simultaneously across multiple local machines to speed up multi-repo workflows.",
     "item_id": "g8",
     "read": false,
@@ -24,7 +24,7 @@
    {
     "title": "Pax by Pydantic",
     "source": "Product Hunt",
-    "link": "https://www.producthunt.com/products/pydantic?utm_campaign=producthunt-api&utm_medium=api-v2&utm_source=Application%3A+PM+AI+NEWS+AGENT+%28ID%3A+297294%29",
+    "link": "https://www.producthunt.com/products/pydantic",
     "why_it_matters": "An open-source coding agent framework from the Pydantic team where every action, including coding itself, is treated as a modular plugin.",
     "item_id": "g4",
     "read": false,
@@ -33,7 +33,7 @@
    {
     "title": "QA.tech MCP",
     "source": "Product Hunt",
-    "link": "https://www.producthunt.com/products/qa-tech?utm_campaign=producthunt-api&utm_medium=api-v2&utm_source=Application%3A+PM+AI+NEWS+AGENT+%28ID%3A+297294%29",
+    "link": "https://www.producthunt.com/products/qa-tech",
     "why_it_matters": "Lets developers verify frontend and backend changes directly from their IDE using automated QA agents via the Model Context Protocol.",
     "item_id": "g2",
     "read": false,
@@ -132,7 +132,7 @@
       {
        "title": "DeskFleet",
        "source": "Product Hunt",
-       "link": "https://www.producthunt.com/products/deskfleet?utm_campaign=producthunt-api&utm_medium=api-v2&utm_source=Application%3A+PM+AI+NEWS+AGENT+%28ID%3A+297294%29",
+       "link": "https://www.producthunt.com/products/deskfleet",
        "why_it_matters": "Allows engineering teams to coordinate and run coding agents simultaneously across multiple local machines to speed up multi-repo workflows.",
        "item_id": "g8",
        "read": false,
@@ -141,7 +141,7 @@
       {
        "title": "Pax by Pydantic",
        "source": "Product Hunt",
-       "link": "https://www.producthunt.com/products/pydantic?utm_campaign=producthunt-api&utm_medium=api-v2&utm_source=Application%3A+PM+AI+NEWS+AGENT+%28ID%3A+297294%29",
+       "link": "https://www.producthunt.com/products/pydantic",
        "why_it_matters": "An open-source coding agent framework from the Pydantic team where every action, including coding itself, is treated as a modular plugin.",
        "item_id": "g4",
        "read": false,
@@ -150,7 +150,7 @@
       {
        "title": "QA.tech MCP",
        "source": "Product Hunt",
-       "link": "https://www.producthunt.com/products/qa-tech?utm_campaign=producthunt-api&utm_medium=api-v2&utm_source=Application%3A+PM+AI+NEWS+AGENT+%28ID%3A+297294%29",
+       "link": "https://www.producthunt.com/products/qa-tech",
        "why_it_matters": "Lets developers verify frontend and backend changes directly from their IDE using automated QA agents via the Model Context Protocol.",
        "item_id": "g2",
        "read": false,

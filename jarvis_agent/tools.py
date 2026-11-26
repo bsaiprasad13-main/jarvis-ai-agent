@@ -135,6 +135,8 @@ def fetch_source(state, name):
     kept = []
     for r in raw:
         item = dict(r, section=src["section"], source=match)
+        if match == "Product Hunt" and item.get("url"):
+            item["url"] = item["url"].split("?")[0]           # drop tracking parameters
         item_id = state.add_item(item)
         if item_id:
             kept.append(item_id)
