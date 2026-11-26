@@ -83,11 +83,22 @@ def _rows_from_state(state, digest):
     return rows
 
 
-def run_desk_with_backups(desk, memory, report, log):
-    """Writer -> (done-check) -> reserve -> (done-check) -> old pipeline. Returns the desk's outcome."""
+WRITER_BUDGET, RESERVE_BUDGET, PIPELINE_RESERVE = 300, 150, 90     # seconds
+
+
+def run_desk_with_backups(desk, memory, report, log, deadline=None):
+    """Writer -> (done-check) -> reserve -> (done-check) -> old pipeline. Returns the desk's outcome.
+    Each attempt gets a time budget, and time is always kept back for the old pipeline."""
     attempts = []
     for role, model in [("writer", DESK_MODEL)] + [("reserve", m) for m in RESERVE_MODELS if m != DESK_MODEL]:
-        state = run_desk(desk, memory, model, log, role=role, tries=5 if role == "writer" else 2)
+        budget = WRITER_BUDGET if role == "writer" else RESERVE_BUDGET
+        until = time.time() + budget
+        if deadline:
+            until = min(until, deadline - PIPELINE_RESERVE)
+            if until - time.time() < 45:
+                report.add(f"{desk.title}: {role} ({model}) skipped", False, "not enough time left in the run", final=False)
+                continue
+        state = run_desk(desk, memory, model, log, role=role, tries=5 if role == "writer" else 2, deadline=until)
         missing = done_check(state)
         if state.error:
             missing = [f"crashed: {state.error}"] + missing
@@ -100,7 +111,7 @@ def run_desk_with_backups(desk, memory, report, log):
                     "rows": _rows_from_state(state, digest), "notes": digest.get("notes") or {}}
         log(f"  [{desk.key}] {role} did not meet its contract: {missing[:2]}")
     log(f"  [{desk.key}] all writers failed; running the old pipeline for this desk")
-    best = max((a["state"] for a in attempts), key=lambda s: len(s.items))
+    best = max((a["state"] for a in attempts), key=lambda s: len(s.items)) if attempts else None
     data = _legacy_for_desk(desk, memory, best)
     report.add(f"{desk.title} delivered its sections", data is not None,
                "written by the old pipeline (all agent writers failed)" if data else "old pipeline also failed")
@@ -113,12 +124,12 @@ def run_desk_with_backups(desk, memory, report, log):
             "fetched": data["fetched"]}
 
 
-def run(memory, log=print):
+def run(memory, log=print, deadline=None):
     """Returns (email_data, sent_urls, trace). Raises only if no section could be produced at all."""
     report, started = ReportCard(), time.time()
     gemini.CALLS.clear()
     with ThreadPoolExecutor(max_workers=len(DESKS)) as pool:            # desks work in parallel
-        outcomes = list(pool.map(lambda d: run_desk_with_backups(d, memory, report, log), DESKS))
+        outcomes = list(pool.map(lambda d: run_desk_with_backups(d, memory, report, log, deadline), DESKS))
 
     # --- assemble ---------------------------------------------------------
     email, all_rows = {"section_notes": {}}, []

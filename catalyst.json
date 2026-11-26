@@ -1,0 +1,9 @@
+{
+  "functions": {
+    "targets": [
+      "jarvis_agent"
+    ],
+    "ignore": [],
+    "source": "functions"
+  }
+}

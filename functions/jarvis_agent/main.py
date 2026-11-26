@@ -1,0 +1,56 @@
+"""Zoho Catalyst Job function: runs Jarvis once. Triggered daily at 10:00 IST by Catalyst Job Scheduling.
+
+Reports and memory live in a Stratus bucket (JARVIS_BUCKET). The website reads reports/index.json from it.
+If the run fails or needs the backup pipeline, an alert email says where (see jarvis_agent/alerts.py).
+Job parameters (optional, e.g. for a test from the console): mode=test, fault=india:writer
+"""
+import logging
+import os
+import sys
+import time
+import traceback
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+if HERE not in sys.path:
+    sys.path.insert(0, HERE)          # the jarvis_agent package and its libraries are bundled here
+
+BUCKET = os.environ.get("JARVIS_BUCKET", "jarvis-reports-66495")
+
+
+def handler(job_request, context):
+    logger = logging.getLogger()
+    log = logger.info
+    stamp, status = "unknown", "failed"
+    try:
+        import zcatalyst_sdk
+        from jarvis_agent import alerts
+        from jarvis_agent.storage import StratusStorage
+        from jarvis_agent.store import Memory
+        import run as runner
+
+        params = job_request.get_all_job_params() or {}
+        if params.get("fault"):
+            os.environ["JARVIS_FAULT"] = str(params["fault"])          # fault-injection test
+        mode = "test" if params.get("mode") == "test" else "daily"
+        remaining = int(context.get_remaining_execution_time_ms()) / 1000   # Catalyst returns a string
+        deadline = time.time() + remaining - 120                           # keep 2 minutes to publish and alert
+
+        app = zcatalyst_sdk.initialize(req=context)
+        store = StratusStorage(app, BUCKET)
+        memory = Memory(storage=store, key="state/memory.json")
+        status, reasons, checks, trace, error, stamp = runner.run_once(
+            memory, store, "reports/", "", mode, save_memory=(mode == "daily"), deadline=deadline, log=log)
+        if status != "ok":
+            alerts.send(status, reasons, checks, trace, error, stamp, log=log)
+    except Exception:
+        err = traceback.format_exc()
+        logger.error(err)
+        try:
+            from jarvis_agent import alerts
+            alerts.send("failed", ["The job crashed before the harness could report"], [], None, err, stamp, log=log)
+        except Exception:
+            logger.error("could not send alert:\n" + traceback.format_exc())
+    if status == "failed":
+        context.close_with_failure()
+    else:
+        context.close_with_success()

@@ -1,4 +1,4 @@
-"""Long-term memory, kept in one local JSON file (data/memory.json).
+"""Long-term memory: one JSON document, on disk (data/memory.json) or in Stratus.
 
 Holds: last successful run, links already sent (14 days), working feed URLs,
 and the agent's own lessons from earlier runs.
@@ -18,14 +18,22 @@ def _now():
 
 
 class Memory:
-    def __init__(self, path=PATH):
-        self.path = path
+    def __init__(self, path=PATH, storage=None, key="state/memory.json"):
+        """Local file by default; pass a storage (e.g. StratusStorage) to keep memory there instead."""
+        self.path, self.storage, self.key = path, storage, key
         self.data = {"last_run": None, "sent": {}, "source_urls": {}, "lessons": []}
-        if os.path.exists(path):
+        if storage is not None:
+            text = storage.read_text(key)
+            if text:
+                self.data.update(json.loads(text))
+        elif os.path.exists(path):
             with open(path, encoding="utf-8") as f:
                 self.data.update(json.load(f))
 
     def save(self):
+        if self.storage is not None:
+            self.storage.write_text(self.key, json.dumps(self.data, indent=2))
+            return
         os.makedirs(os.path.dirname(self.path), exist_ok=True)
         tmp = self.path + ".tmp"
         with open(tmp, "w", encoding="utf-8") as f:

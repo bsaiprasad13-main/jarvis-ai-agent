@@ -93,7 +93,7 @@ FAKE_EVALUATOR_DOWN = False
 SCRIPTS, LOCK = {}, threading.Lock()
 
 
-def fake_step(model, system, contents, decls, tries=5):
+def fake_step(model, system, contents, decls, tries=5, deadline=None):
     gemini._record(model, time.time(), 200)
     desk = "global" if "Global desk" in system else "india"
     role = "reserve" if "RESERVE writer" in system else "writer"
@@ -322,10 +322,89 @@ check("web text is escaped in the email", "<script>x" not in html)
 check("email footer shows each desk and the harness checks", "Global desk" in html and "India desk" in html
       and "Harness checks" in html)
 import run as runner  # noqa: E402
-runner.SITE_DATA_DIR = tempfile.mkdtemp()
-links = runner.publish_site_data("2026-01-01_1000", email, trace, "dry run")
-idx = json.load(open(os.path.join(runner.SITE_DATA_DIR, "index.json"), encoding="utf-8"))
-check("website data is written and read back", sorted(links) == sorted(urls) and idx[0]["id"] == "2026-01-01_1000")
+from jarvis_agent import alerts  # noqa: E402
+from jarvis_agent.storage import LocalStorage  # noqa: E402
+tmp_site = tempfile.mkdtemp()
+links = runner.publish_report(LocalStorage(tmp_site), "data/", "data/", "2026-01-01_1000", email, trace, "test run")
+idx = json.load(open(os.path.join(tmp_site, "data", "index.json"), encoding="utf-8"))
+check("report is written and read back", sorted(links) == sorted(urls) and idx[0]["file"] == "data/2026-01-01_1000.json")
+
+# --- 9b. alerts: when an email goes out, and what it says ---------------------
+ok_checks = [{"check": "Global desk: writer met its contract", "passed": False, "final": False, "evidence": "crashed: 503"},
+             {"check": "No story appears twice", "passed": True, "final": True, "evidence": ""}]
+check("recovered problems alone send no alert", alerts.classify(ok_checks, {"desks": []}, None)[0] == "ok")
+bad = ok_checks + [{"check": "Every link was fetched today", "passed": False, "final": True, "evidence": "9/10 links"}]
+st_, rs_ = alerts.classify(bad, {"desks": []}, None)
+msg = alerts.build_message(st_, rs_, bad, {"desks": []}, None, "2026-01-01_1000")
+check("a failed final check is an alert that names the check", st_ == "failed" and "Every link was fetched today" in msg
+      and "RETRIED" in msg and "crashed: 503" in msg)
+check("backup pipeline use is flagged as degraded",
+      alerts.classify(ok_checks, {"desks": [{"title": "India desk", "written_by": "pipeline"}]}, None)[0] == "degraded")
+check("a crash is an alert with the error", alerts.classify([], None, "Traceback...\nKeyError: 'x'")[0] == "failed")
+
+# --- 9c. the Catalyst Job function, end to end, with a fake SDK and bucket ------
+import types  # noqa: E402
+BUCKET = {}
+
+
+class FakeBucket:
+    bucket_domain = "https://fake-development.zohostratus.in"
+
+    def get_object(self, key):
+        if key not in BUCKET:
+            raise Exception("404")
+        return BUCKET[key]
+
+    def put_object(self, key, body, options=None):
+        BUCKET[key] = body
+        return True
+
+
+fake_sdk = types.ModuleType("zcatalyst_sdk")
+fake_sdk.initialize = lambda req=None: types.SimpleNamespace(stratus=lambda: types.SimpleNamespace(bucket=lambda name: FakeBucket()))
+sys.modules["zcatalyst_sdk"] = fake_sdk
+sys.path.insert(0, os.path.join(ROOT, "functions", "jarvis_agent"))
+import importlib  # noqa: E402
+catalyst_main = importlib.import_module("main")
+
+
+class FakeContext:
+    result = None
+
+    def get_remaining_execution_time_ms(self):
+        return "900000"
+
+    def close_with_success(self):
+        self.result = "success"
+
+    def close_with_failure(self):
+        self.result = "failure"
+
+
+SCRIPTS.update({("global", "writer"): global_script(first_why=WHY), ("india", "writer"): india_script()})
+sent_alerts = []
+real_send = alerts.send
+alerts.send = lambda *a, **k: sent_alerts.append(a[0])
+ctx = FakeContext()
+catalyst_main.handler(types.SimpleNamespace(get_all_job_params=lambda: {}), ctx)
+idx = json.loads(BUCKET["reports/index.json"].decode() if isinstance(BUCKET["reports/index.json"], bytes) else BUCKET["reports/index.json"])
+mem = json.loads(BUCKET["state/memory.json"].decode())
+check("Catalyst job publishes the report and index to Stratus", ctx.result == "success" and idx[-1]["file"].endswith(".json")
+      and f"reports/{idx[-1]['id']}.json" in BUCKET)
+check("Catalyst job saves memory to Stratus for the next day", mem["last_run"] and len(mem["sent"]) == 5)
+check("a clean Catalyst run sends no alert", sent_alerts == [])
+
+SCRIPTS.update({("global", "writer"): global_script(first_why=WHY), ("india", "writer"): ["CRASH"],
+                ("india", "reserve"): ["CRASH"]})
+BUCKET.clear()                                      # fresh day: nothing sent yet
+ctx2 = FakeContext()
+catalyst_main.handler(types.SimpleNamespace(get_all_job_params=lambda: {"mode": "test"}), ctx2)
+check("Catalyst run that needed the backup pipeline alerts as degraded", sent_alerts == ["degraded"] and ctx2.result == "success")
+fake_sdk.initialize = lambda req=None: (_ for _ in ()).throw(RuntimeError("Stratus unreachable"))
+ctx3 = FakeContext()
+catalyst_main.handler(types.SimpleNamespace(get_all_job_params=lambda: {}), ctx3)
+check("a Catalyst crash alerts as failed and marks the job failed", sent_alerts[-1] == "failed" and ctx3.result == "failure")
+alerts.send = real_send
 
 # --- 10. memory --------------------------------------------------------------
 m = new_memory()

@@ -22,7 +22,7 @@ def _record(model, started, status):
         CALLS.append({"model": model, "ms": round((time.time() - started) * 1000), "ok": status == 200, "status": status})
 
 
-def _post(model, payload, tries=5):
+def _post(model, payload, tries=5, deadline=None):
     key = os.environ.get("GEMINI_API_KEY")
     if not key:
         raise GeminiError("GEMINI_API_KEY is not set (put it in .env)")
@@ -32,7 +32,7 @@ def _post(model, payload, tries=5):
         started = time.time()
         try:
             # key in a header, never in the URL, so it can't appear in error messages
-            resp = requests.post(url, headers={"x-goog-api-key": key}, json=payload, timeout=90)
+            resp = requests.post(url, headers={"x-goog-api-key": key}, json=payload, timeout=60)
         except requests.RequestException as e:
             last = f"network error: {type(e).__name__}"
             _record(model, started, 0)
@@ -43,6 +43,8 @@ def _post(model, payload, tries=5):
             last = f"HTTP {resp.status_code}: {resp.text[:300]}"
             if resp.status_code not in (429, 500, 502, 503, 504):
                 raise GeminiError(last)
+        if deadline and time.time() + wait > deadline:      # out of time: stop retrying
+            break
         if attempt < tries - 1:
             time.sleep(wait)
             wait = min(wait * 2, 60)
@@ -71,7 +73,7 @@ def ask_json(model, prompt, system=None, tries=5):
     return json.loads(text)
 
 
-def step(model, system, contents, declarations, tries=5):
+def step(model, system, contents, declarations, tries=5, deadline=None):
     """One agent step. Returns the model's content (kept as-is, so any
     thought signatures go back unchanged) and the function calls in it."""
     payload = {
@@ -82,7 +84,7 @@ def step(model, system, contents, declarations, tries=5):
         # run by calling `finish`, never with loose text.
         "toolConfig": {"functionCallingConfig": {"mode": "ANY"}},
     }
-    content = _content(_post(model, payload, tries))
+    content = _content(_post(model, payload, tries, deadline))
     content.setdefault("role", "model")
     calls = [p["functionCall"] for p in content.get("parts", []) if "functionCall" in p]
     return content, calls

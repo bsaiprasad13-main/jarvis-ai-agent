@@ -1,9 +1,13 @@
 .env
 /runs/
 /data/*
-!/data/memory.json
 __pycache__/
 *.py[cod]
 .venv/
 venv/
 /writeup/
+.catalystrc
+/functions/jarvis_agent/*
+!/functions/jarvis_agent/main.py
+!/functions/jarvis_agent/catalyst-config.json
+!/functions/jarvis_agent/requirements.txt

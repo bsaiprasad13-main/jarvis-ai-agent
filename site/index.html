@@ -126,6 +126,8 @@ th { font: 500 12px/1.2 var(--mono); letter-spacing: 0.05em; text-transform: upp
 td.ev { color: var(--muted); font-size: 13px; overflow-wrap: anywhere; }
 footer { margin-top: 56px; padding-top: 18px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13px; display: grid; gap: 4px; }
 @media (prefers-reduced-motion: no-preference) { .run-btn { transition: border-color .15s; } }
+details.how { margin-top: 8px; border-top: 1px solid var(--line); padding-top: 12px; }
+details.how > summary { font: 600 15px/1.3 var(--display); color: var(--agent); }
 .nav { display: flex; gap: 6px 16px; flex-wrap: wrap; font-size: 14px; }
 .bg { font-size: 12.5px; color: var(--muted); }
 .bg a { color: var(--muted); }
@@ -157,36 +159,47 @@ td.num { font-variant-numeric: tabular-nums; font-family: var(--mono); font-size
 <body>
 <div class="wrap">
   <header>
-    <div class="eyebrow">Jarvis · multi-agent AI brief</div>
+    <div class="eyebrow">Jarvis · daily AI brief, written and checked by agents</div>
     <h1>Jarvis AI Agent</h1>
-    <p class="lead">Every morning two AI desks read the day's AI tools, AI news and India tech news, and write a short brief for engineers who build with AI. An evaluator on a different model reviews every draft, and a harness written in plain code decides when the work is actually done. Below: ask Jarvis about its briefs with a model that runs on your own device, see every run with its evidence, and watch how the system behaves over time.</p>
-    <nav class="nav" aria-label="Sections"><a href="#ask">Ask Jarvis</a><a href="#runs-h">Runs</a><a href="#monitoring">Monitoring</a><a href="https://github.com/bsaiprasad13-main/jarvis-ai-agent">Source code</a></nav>
+    <p class="lead">Every morning at 10:00 IST, Jarvis reads the day's AI tools, AI news and India tech news and writes a short brief for engineers who build with AI. Two AI agents write it, a separate AI model checks it, and plain code makes sure the work is really finished before anything is published. It runs on Zoho Catalyst.</p>
+    <nav class="nav" aria-label="Sections"><a href="#reports">Daily reports</a><a href="#how">How it works</a><a href="#ask">Ask Jarvis</a><a href="#monitoring">Monitoring</a><a href="https://github.com/bsaiprasad13-main/jarvis-ai-agent">Source code</a></nav>
   </header>
 
-  <section>
+  <section id="reports">
+    <div class="section-head">
+      <div class="eyebrow" id="runs-h">Daily reports</div>
+      <h2>Pick a day</h2>
+      <p>The newest report is open. Under each report, "How Jarvis made this report" shows what the agents did, what the checker sent back, and every check the system ran.</p>
+    </div>
+    <div class="runs" id="runs" role="group" aria-label="Reports"><p class="muted">Loading reports…</p></div>
+  </section>
+
+  <div id="run"></div>
+
+  <section id="how">
     <div class="section-head">
       <div class="eyebrow">How it works</div>
-      <h2>Agents do the judgment, code does the checking</h2>
-      <p>Dashed boxes are plain code. Solid boxes are models.</p>
+      <h2>AI does the judgment, code does the checking</h2>
+      <p>Dashed boxes are plain code. Solid boxes are AI models.</p>
     </div>
     <div class="flow">
-      <div class="node"><b>Two desk agents</b><span>Global: Product Hunt, Hacker News, TechCrunch, VentureBeat. India: YourStory, Inc42, Business Standard. Each decides what to fetch, which articles to read, what background to look up on Edgepedia, and when its draft is ready. Reader, sections and desks live in one config file.</span></div>
-      <div class="node"><b>Evaluator</b><span>A different model, so nothing grades its own work. Scores each draft 1 to 5 on grounded, specific, relevant, selection and honest, with evidence and exact fixes.</span></div>
-      <div class="node code"><b>Done-check</b><span>A desk can't finish until its contract is met. Crashed or half-done work goes to a reserve model, then to the old pipeline.</span></div>
-      <div class="node code"><b>Final checks</b><span>Every link was fetched today, nothing repeats, every section is filled or explained, and the email and this site's data were written and read back.</span></div>
+      <div class="node"><b>1 · Two writer agents</b><span>A Global desk (Product Hunt, Hacker News, TechCrunch, VentureBeat) and an India desk (YourStory, Inc42, Business Standard) each decide what to fetch, which articles to read in full, what background to look up on Edgepedia, and when their draft is ready.</span></div>
+      <div class="node"><b>2 · An independent checker</b><span>A different AI model scores every draft on five points (grounded, specific, relevant, best picks, honest) and sends it back with exact fixes until it is good enough.</span></div>
+      <div class="node code"><b>3 · Done means done</b><span>A writer can't declare itself finished until code confirms its job is complete. If it crashes or stops half way, a backup model redoes the job, then the original simple pipeline.</span></div>
+      <div class="node code"><b>4 · Final checks and alerts</b><span>Every link was really fetched today, nothing repeats, every section is filled or explained, and the report is saved and read back. If anything fails, an email says exactly where.</span></div>
     </div>
   </section>
 
   <section id="ask">
     <div class="section-head">
-      <div class="eyebrow">Ask Jarvis</div>
-      <h2>Chat with the briefs, on your own device</h2>
-      <p>Jarvis finds the stories that match your question across every run below. Load the small model and it answers in a sentence or two, citing those stories. The model runs in your browser: after a one-time download, nothing you type leaves this page. Code checks every answer, and one that cites no real story is replaced with an honest "that isn't in my briefs".</p>
+      <div class="eyebrow">Ask Jarvis (optional)</div>
+      <h2>Ask about the reports, on your own device</h2>
+      <p>Type a question to see the matching stories from every report. On a computer with Chrome or Edge you can also load a small AI model that runs inside your browser and answers in a sentence or two with sources; nothing you type leaves this page.</p>
     </div>
     <div class="chat">
       <form class="chat-row" id="ask-form">
         <label for="q" class="sr">Your question</label>
-        <input type="text" id="q" placeholder="e.g. What happened with Sarvam AI this week?" autocomplete="off">
+        <input type="text" id="q" placeholder="e.g. Which Indian startups raised money?" autocomplete="off">
         <button class="btn" type="submit">Ask</button>
       </form>
       <div class="engine" id="engine">
@@ -202,33 +215,25 @@ td.num { font-variant-numeric: tabular-nums; font-family: var(--mono); font-size
     </div>
   </section>
 
-  <section>
-    <div class="section-head">
-      <div class="eyebrow" id="runs-h">Runs</div>
-      <h2>Pick a run</h2>
-    </div>
-    <div class="runs" id="runs" role="group" aria-label="Runs"><p class="muted">Loading runs…</p></div>
-  </section>
-
-  <div id="run"></div>
-
   <section id="monitoring">
     <div class="section-head">
       <div class="eyebrow">Monitoring</div>
       <h2>How the system behaves over time</h2>
-      <p>Computed in your browser from every agent run on this site: model latency and failures, how often the evaluator sends work back, and what the harness caught.</p>
+      <p>Worked out in your browser from every agent report on this page: AI model speed and failures, how often the checker sends work back, and what the system caught.</p>
     </div>
     <div id="mon"><p class="muted">Loading…</p></div>
   </section>
 
   <footer>
-    <p>Built with Python, Gemini function calling, the Edgepedia API and GitHub Actions; the chat runs on WebLLM. Runs every morning at 10:00 IST; this page reads the saved run files directly.</p>
+    <p>Runs daily on Zoho Catalyst (Job Scheduling + Stratus). Built with Python, Gemini function calling and the Edgepedia API; this page is hosted on GitHub Pages and the chat runs on WebLLM.</p>
     <p>Background summaries come from <a href="https://www.edgepedia.org">Edgepedia</a>.</p>
   </footer>
 </div>
 
 <script>
 (function () {
+  // Daily reports are written by the Zoho Catalyst job into this Stratus bucket (public, read-only).
+  const REPORTS_BASE = "https://jarvis-reports-66495-development.zohostratus.in/reports/";
   const $ = (id) => document.getElementById(id);
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
   const SECTIONS = [["section_1_tools", "AI & developer tools"], ["section_2_ai_news", "AI industry news"], ["section_3_india_news", "India tech & startups"]];
@@ -248,7 +253,7 @@ td.num { font-variant-numeric: tabular-nums; font-family: var(--mono); font-size
       const info = r.kind === "pipeline" ? "one model call, no review" :
         `${r.stories} stories · ${r.checks_passed}/${r.checks} checks${r.recoveries ? ` · ${r.recoveries} recovered` : ""}`;
       return `<button class="run-btn ${r.kind}" data-id="${esc(r.id)}" aria-pressed="${r.id === active}">
-        <span class="kind">${r.kind === "pipeline" ? "Before: pipeline" : "Agent · " + esc(r.mode)}</span>
+        <span class="kind">${r.kind === "pipeline" ? "Before: old pipeline" : (r.mode === "daily" ? "Daily report" : esc(r.mode))}</span>
         <span>${esc(when(r.id))}</span><small>${esc(info)}</small></button>`;
     }).join("");
     $("runs").querySelectorAll("button").forEach((b) => b.addEventListener("click", () => { location.hash = "r-" + b.dataset.id; }));
@@ -319,19 +324,20 @@ td.num { font-variant-numeric: tabular-nums; font-family: var(--mono); font-size
     const passed = finals.filter((c) => c.passed).length, retried = t.report_card.filter((c) => c.final === false && !c.passed).length;
     const stories = SECTIONS.reduce((n, [k]) => n + (rec.email[k] || []).length, 0);
     $("run").innerHTML = `
-      <section><div class="section-head"><div class="eyebrow">Run · ${esc(when(rec.id))}</div><h2>The digest</h2></div>
-        <div class="meta"><span class="chip">${esc(rec.mode)}</span><span class="chip">${stories} stories</span>
-          <span class="chip ${passed === finals.length ? "ok" : "bad"}">${passed}/${finals.length} final checks passed</span>
-          ${retried ? `<span class="chip warn">${retried} failure${retried > 1 ? "s" : ""} recovered</span>` : ""}<span class="chip">${t.seconds}s</span></div>
-        ${digestHtml(rec.email)}</section>
-      <section><div class="section-head"><div class="eyebrow">Agents</div><h2>How each desk worked</h2>
-        <p>Each box is one attempt. A failed attempt is handed to the next model. Hover a rubric bar for the evaluator's evidence.</p></div>
-        <div class="desks">${t.desks.map((d) => `<div class="desk"><div class="desk-head"><h3>${esc(d.title)}</h3>
-          <p class="muted" style="font-size:14px">Delivered by the ${d.written_by === "pipeline" ? "old pipeline (all agent writers failed)" : esc(d.written_by)}.</p></div>
-          ${d.attempts.map(attemptHtml).join("")}</div>`).join("")}</div></section>
-      <section><div class="section-head"><div class="eyebrow">Harness</div><h2>Report card</h2>
-        <p>Every check the harness ran in code. RETRIED means an attempt failed and the harness recovered by handing the work to the next model.</p></div>
-        ${reportHtml(t.report_card)}</section>`;
+      <section><div class="section-head"><div class="eyebrow">${rec.mode === "daily" ? "Daily report" : "Report (" + esc(rec.mode) + ")"} · ${esc(when(rec.id))}</div><h2>The brief</h2></div>
+        <div class="meta"><span class="chip">${stories} stories</span>
+          <span class="chip ${passed === finals.length ? "ok" : "bad"}">${passed}/${finals.length} checks passed</span>
+          ${retried ? `<span class="chip warn">${retried} problem${retried > 1 ? "s" : ""} fixed automatically</span>` : ""}<span class="chip">made in ${t.seconds}s</span></div>
+        ${digestHtml(rec.email)}
+        <details class="how"><summary>How Jarvis made this report</summary>
+          <p class="muted" style="font-size:14px;margin:10px 0">Each box is one attempt by one AI model. A failed attempt is handed to the next model. Hover a score bar to see the checker's reason.</p>
+          <div class="desks">${t.desks.map((d) => `<div class="desk"><div class="desk-head"><h3>${esc(d.title)}</h3>
+            <p class="muted" style="font-size:14px">Written by the ${d.written_by === "pipeline" ? "original pipeline (all agent writers failed)" : esc(d.written_by)}.</p></div>
+            ${d.attempts.map(attemptHtml).join("")}</div>`).join("")}</div>
+          <h3 style="margin:18px 0 8px">Every check the system ran</h3>
+          <p class="muted" style="font-size:14px;margin-bottom:8px">RETRIED means an attempt failed and the system recovered by handing the work to the next model.</p>
+          ${reportHtml(t.report_card)}
+        </details></section>`;
   }
 
   // ---------------------------------------------------------------- data
@@ -500,9 +506,14 @@ td.num { font-variant-numeric: tabular-nums; font-family: var(--mono); font-size
   }
 
   async function boot() {
-    try { index = await (await fetch("data/index.json")).json(); }
-    catch (e) { $("runs").innerHTML = '<p class="note">No runs published yet.</p>'; return; }
-    const latest = (index.filter((r) => r.kind !== "pipeline").pop() || index[index.length - 1] || {}).id;
+    const fromRepo = await fetch("data/index.json").then((r) => r.json()).catch(() => []);
+    const fromCatalyst = await fetch(REPORTS_BASE + "index.json", { cache: "no-store" }).then((r) => r.ok ? r.json() : [])
+      .then((xs) => xs.map((x) => ({ ...x, file: REPORTS_BASE + x.file }))).catch(() => []);
+    const byId = new Map([...fromRepo, ...fromCatalyst].map((r) => [r.id, r]));
+    index = [...byId.values()].sort((x, y) => (x.id < y.id ? -1 : 1));
+    if (!index.length) { $("runs").innerHTML = '<p class="note">No reports published yet.</p>'; return; }
+    const agentRuns = index.filter((r) => r.kind !== "pipeline");
+    const latest = (agentRuns.filter((r) => r.mode === "daily").pop() || agentRuns.pop() || index[index.length - 1] || {}).id;
     const route = () => { if (location.hash.startsWith("#r-")) show(location.hash.slice(3)); };
     window.addEventListener("hashchange", route);
     if (location.hash.startsWith("#r-")) route(); else show(latest);

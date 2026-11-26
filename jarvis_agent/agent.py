@@ -53,7 +53,7 @@ Lessons from your earlier runs:
 {lesson_text}"""
 
 
-def run_desk(desk, memory, model, log=print, role="writer", tries=5):
+def run_desk(desk, memory, model, log=print, role="writer", tries=5, deadline=None):
     """Run one desk to completion (or until it stops). Never raises: errors are recorded on the state."""
     state = RunState(memory, evaluator.review, desk, model=model, role=role)
     today = datetime.date.today().strftime("%A, %d %B %Y")
@@ -66,8 +66,12 @@ def run_desk(desk, memory, model, log=print, role="writer", tries=5):
         return state
     try:
         for step_no in range(1, MAX_STEPS + 1):
+            if deadline and time.time() > deadline:
+                state.error = "time budget used up"
+                log(f"  [{desk.key}/{role}] {state.error}")
+                break
             state.steps = step_no
-            content, calls = gemini.step(model, system, contents, decls, tries=tries)
+            content, calls = gemini.step(model, system, contents, decls, tries=tries, deadline=deadline)
             contents.append(content)
             if not calls:
                 contents.append({"role": "user", "parts": [{"text": "Continue by calling a tool."}]})

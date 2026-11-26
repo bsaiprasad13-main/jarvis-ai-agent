@@ -1,29 +1,25 @@
-name: Daily Jarvis run
+name: Publish website
+
+# The daily run happens on Zoho Catalyst (Job Scheduling, 10:00 IST). GitHub only tests the code and
+# publishes the static website when it changes; the page reads each day's report from Catalyst.
 
 on:
-  schedule:
-    - cron: "30 4 * * *"        # 10:00 IST
-  workflow_dispatch:             # "Run workflow" button
   push:
     branches: [main]
-    paths: ["site/**"]           # redeploy the website when its page changes
+  workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
   pages: write
   id-token: write
 
 concurrency:
-  group: jarvis-daily
-  cancel-in-progress: false
+  group: pages
+  cancel-in-progress: true
 
 jobs:
-  run:
-    if: github.event_name != 'push'
+  test:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
-    env:
-      TZ: Asia/Kolkata           # run ids and dates in India time
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -31,32 +27,15 @@ jobs:
           python-version: "3.12"
       - run: pip install -r requirements.txt
       - run: python tests/test_agent.py
-      - name: Run the agents (website only, no email)
-        env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          PRODUCT_HUNT_DEVELOPER_TOKEN: ${{ secrets.PRODUCT_HUNT_DEVELOPER_TOKEN }}
-        run: python run.py --no-email
-      - name: Save the run (also when a check failed, so the site shows it)
-        if: always()
-        run: |
-          git config user.name "jarvis-bot"
-          git config user.email "jarvis-bot@users.noreply.github.com"
-          git add site/data
-          git add data/memory.json 2>/dev/null || true
-          git diff --cached --quiet || git commit -m "Daily run $(date -u +%F)"
-          git push
 
   deploy:
-    needs: run
-    if: always()
+    needs: test
     runs-on: ubuntu-latest
     environment:
       name: github-pages
       url: ${{ steps.deploy.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: main
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
