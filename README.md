@@ -29,7 +29,7 @@ It grew out of a fixed pipeline that has emailed me a daily brief in production 
 ```
 
 - **Desks are agents with function calling.** Each decides which of its sources to fetch, which articles to read in full, when to search for more, which companies or concepts to look up on [Edgepedia](https://www.edgepedia.org) for background, and when its draft is ready. It can only touch its own sources and sections.
-- **The evaluator is a separate model in a fresh context**, so no model grades its own work. It scores each draft 1–5 on grounded, specific, relevant, selection and honest, with evidence and exact fixes. Malformed or missing reviews fall through to the next evaluator model and never cost the writer a draft.
+- **The evaluator is a separate model in a fresh context**, so no model grades its own work. It scores each draft 1–5 on grounded, specific, relevant, selection and honest, with evidence and exact fixes; a draft needs 4+ on grounding, 3+ elsewhere and a 3.5 average. Malformed or missing reviews fall through to the next evaluator model and never cost the writer a draft.
 - **Done is decided by code.** `finish` is refused until the desk's contract is met: sources fetched, enough articles read, sections filled (an empty "quiet" section is refused when there were enough stories), and the evaluator's approval.
 - **Failures are routed by code.** A desk that crashes, runs out of steps or stops half done goes to a reserve model, then the next, then the old pipeline for that desk only. Every run ends with a report card: PASS, FAIL, or RETRIED when the harness recovered.
 

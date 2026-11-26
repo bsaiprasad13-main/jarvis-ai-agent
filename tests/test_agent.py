@@ -269,6 +269,20 @@ check("evaluator outage is visible in the trace",
       d0["evaluator_model"] == EVALUATOR_BACKUP and d0["independent"] is (EVALUATOR_BACKUP != DESK_MODEL))
 FAKE_EVALUATOR_DOWN = False
 
+# --- 8a. a draft with weak grounding is sent back even if the average is fine
+real = gemini.ask_json
+gemini.ask_json = lambda *a, **k: {"rubric": {"grounded": {"score": 3, "evidence": "invents a feature"}, "specific": {"score": 5},
+                                              "relevant": {"score": 5}, "selection": {"score": 5}, "honest": {"score": 5}}, "issues": []}
+gs = tools.RunState(new_memory(), evaluator.review, INDIA, model=DESK_MODEL)
+for n in INDIA.sources:
+    tools.fetch_source(gs, n)
+for i in ("i1", "i2"):
+    tools.read_article(gs, i)
+rv = evaluator.review(gs, {"india_news": [{"item_id": "i1", "title": "x", "why_it_matters": WHY}, {"item_id": "i2", "title": "y", "why_it_matters": WHY}],
+                           "notes": {}})
+check("grounding below 4 fails the draft even with a high average", rv["score"] >= 8 and not rv["accepted"])
+gemini.ask_json = real
+
 # --- 8b. evaluator returns broken JSON -> next evaluator; total outage costs no draft
 calls_before = len(EVAL_CALLS)
 real_fake = gemini.ask_json

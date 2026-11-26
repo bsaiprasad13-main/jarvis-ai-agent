@@ -8,7 +8,7 @@ Two layers:
    the right section, enough articles read, explanations of sane length.
 2. A rubric scored by the evaluator model, 1-5 on each dimension, each with
    evidence. A draft passes only with no rule broken, no dimension below 3,
-   and an average of at least 3.5 (shown as 7/10).
+   grounding at 4 or more, and an average of at least 3.5 (shown as 7/10).
 """
 from . import gemini
 from .config import EVALUATOR_BACKUP, EVALUATOR_MODELS
@@ -24,6 +24,7 @@ RUBRIC = {
     "honest": "Section notes are truthful about quiet days and failed sources.",
 }
 PASS_MIN_DIM, PASS_AVG = 3, 3.5
+PASS_MIN_GROUNDED = 4      # made-up details are the costliest failure, so grounding has a higher bar
 
 
 def check_rules(state, digest):
@@ -146,7 +147,8 @@ def review(state, digest):
                 "issues": [], "evaluator_model": None, "independent": False, "error": type(e).__name__}
     scores = [d["score"] for d in rubric.values()]
     avg = sum(scores) / len(scores)
-    passed = not errors and min(scores) >= PASS_MIN_DIM and avg >= PASS_AVG
+    passed = (not errors and min(scores) >= PASS_MIN_DIM and avg >= PASS_AVG
+              and rubric["grounded"]["score"] >= PASS_MIN_GROUNDED)
     return {"accepted": passed, "score": round(avg * 2, 1), "rubric": rubric, "rule_errors": errors,
             "issues": issues, "evaluator_model": model,
             "independent": model is not None and model != state.model}
