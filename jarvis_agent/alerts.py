@@ -56,27 +56,52 @@ def build_message(status, reasons, report_checks, trace, error, run_id):
     return "\n".join(lines)
 
 
+SETTINGS = ("GEMINI_API_KEY", "PRODUCT_HUNT_DEVELOPER_TOKEN", "JARVIS_BUCKET",
+            "RESEND_API_KEY", "ALERT_TO_EMAIL", "ALERT_FROM_EMAIL")
+
+
+def setting(name, *fallbacks):
+    """An environment value with stray spaces and wrapping quotes removed (common copy-paste mistakes)."""
+    for n in (name, *fallbacks):
+        v = (os.environ.get(n) or "").strip().strip('"').strip("'").strip()
+        if v:
+            return v
+    return ""
+
+
+def settings_report():
+    """Which settings this function can see. Names only, never values."""
+    present = [n for n in SETTINGS if setting(n)]
+    missing = [n for n in SETTINGS if not setting(n)]
+    return f"settings present: {', '.join(present) or 'none'} | missing: {', '.join(missing) or 'none'}"
+
+
 def send(status, reasons, report_checks, trace, error, run_id, log=print):
     if status == "ok":
         return False
     body = build_message(status, reasons, report_checks, trace, error, run_id)
-    key = os.environ.get("RESEND_API_KEY")
-    to = os.environ.get("ALERT_TO_EMAIL") or os.environ.get("TO_EMAIL")
-    sender = os.environ.get("ALERT_FROM_EMAIL") or os.environ.get("FROM_EMAIL")
+    key = setting("RESEND_API_KEY")
+    to = setting("ALERT_TO_EMAIL", "TO_EMAIL")
+    sender = setting("ALERT_FROM_EMAIL", "FROM_EMAIL")
     subject = (f"Jarvis FAILED: {reasons[0][:90]}" if status == "failed"
                else "Jarvis needs attention: backup pipeline used")
-    if not (key and to and sender):
-        log("ALERT (email not configured):\n" + body)
+    missing = [n for n, v in (("RESEND_API_KEY", key), ("ALERT_TO_EMAIL", to), ("ALERT_FROM_EMAIL", sender)) if not v]
+    if missing:
+        log(f"ALERT NOT EMAILED: missing setting(s) {', '.join(missing)} on this function.\n" + body)
         return False
     try:
         resp = requests.post("https://api.resend.com/emails", timeout=20,
                              headers={"Authorization": f"Bearer {key}"},
                              json={"from": sender, "to": [to], "subject": subject, "text": body})
-        log(f"alert email sent ({resp.status_code})")
-        return resp.status_code in (200, 201)
     except Exception as e:
-        log(f"alert email failed: {type(e).__name__}\n{body}")
+        log(f"ALERT NOT EMAILED: could not reach Resend ({type(e).__name__}).\n{body}")
         return False
+    if resp.status_code in (200, 201):
+        log("alert email sent")
+        return True
+    log(f"ALERT NOT EMAILED: Resend rejected it (HTTP {resp.status_code}): {resp.text[:300]}\n"
+        f"Check ALERT_FROM_EMAIL uses your verified Resend domain and RESEND_API_KEY can send.\n{body}")
+    return False
 
 
 def stamp():

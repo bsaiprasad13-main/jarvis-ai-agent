@@ -70,7 +70,7 @@ Every rule below is enforced in code, not by asking the model nicely.
 
 ## 5. How it was tested
 
-- **52 offline checks** (`python tests/test_agent.py`, with fake models and fake sources, run on every push). They cover:
+- **57 offline checks** (`python tests/test_agent.py`, with fake models and fake sources, run on every push). They cover:
   - a desk calling `finish` early, crashing, or stopping half done
   - every agent writer failing
   - the checker going down or returning broken JSON (this never costs the writer a draft)
@@ -139,7 +139,7 @@ Fixes found by reading real run logs, each covered by a test:
 
 ```
 pip install -r requirements.txt
-python tests/test_agent.py               # 52 offline checks
+python tests/test_agent.py               # 57 offline checks
 copy .env.example .env                   # GEMINI_API_KEY, PRODUCT_HUNT_DEVELOPER_TOKEN
 python run.py --dry-run                  # a real run; report saved to site/data
 ```
@@ -147,14 +147,19 @@ python run.py --dry-run                  # a real run; report saved to site/data
 **Deploy to Zoho Catalyst:**
 
 ```
-python scripts/build_catalyst.py         # bundles code + Linux/Python 3.12 libraries
-catalyst deploy --only functions:jarvis_agent
+python scripts/deploy_catalyst.py        # builds, deploys, and carries the settings from catalyst.env
 ```
+
+Why a deploy script: `catalyst deploy` replaces the function's environment variables with whatever its
+config file lists, so settings typed only in the console are wiped by the next deploy (this happened once;
+the run logs showed it). The script puts the settings from `catalyst.env` (gitignored; see
+`catalyst.env.example`) into the config just for the deploy, refuses to deploy if one is missing, and
+restores the clean config afterwards. Every run also logs which settings it can see (names only).
 
 In the Catalyst console:
 1. Create a Stratus bucket (Public template) and allow the website's domain in Bucket CORS.
 2. Create a Function job pool.
-3. Add the environment variables to `jarvis_agent`.
+3. Fill in `catalyst.env` (the deploy script sends it to the function).
 4. Create a daily 10:00 IST cron that runs the job function.
 
 To check the alert email, submit one job with the parameter `test_alert=1`: it sends a test alert and runs nothing else. `mode=test` runs without touching memory; `fault=india:writer` crashes that writer on purpose to show the recovery.
@@ -180,4 +185,4 @@ Environment variables:
 | `run.py` | One run: harness → publish and read back → memory → alert |
 | `scripts/build_catalyst.py` | Builds the Catalyst function folder |
 | `site/index.html` | The website |
-| `tests/test_agent.py` | The 52 offline checks |
+| `tests/test_agent.py` | The 57 offline checks |

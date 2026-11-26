@@ -32,6 +32,7 @@ def handler(job_request, context):
         import run as runner
 
         params = job_request.get_all_job_params() or {}
+        log(alerts.settings_report())                       # names only, so a wiped setting is obvious in the logs
         if params.get("test_alert"):
             sent = alerts.send("failed", ["This is a test alert sent from the Catalyst console (test_alert=1). "
                                           "Nothing is wrong."], [], None, None, "test-alert", log=log)

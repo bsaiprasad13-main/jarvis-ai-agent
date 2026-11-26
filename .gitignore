@@ -11,3 +11,4 @@ venv/
 !/functions/jarvis_agent/main.py
 !/functions/jarvis_agent/catalyst-config.json
 !/functions/jarvis_agent/requirements.txt
+catalyst.env

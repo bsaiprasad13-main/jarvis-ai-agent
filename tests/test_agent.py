@@ -342,6 +342,36 @@ check("backup pipeline use is flagged as degraded",
       alerts.classify(ok_checks, {"desks": [{"title": "India desk", "written_by": "pipeline"}]}, None)[0] == "degraded")
 check("a crash is an alert with the error", alerts.classify([], None, "Traceback...\nKeyError: 'x'")[0] == "failed")
 
+# --- 9b2. alert delivery: clear reasons when it can't be emailed --------------
+logs = []
+for n in ("RESEND_API_KEY", "ALERT_TO_EMAIL", "ALERT_FROM_EMAIL", "TO_EMAIL", "FROM_EMAIL"):
+    os.environ.pop(n, None)
+os.environ["RESEND_API_KEY"] = "  re_test  "
+os.environ["ALERT_TO_EMAIL"] = "me@example.com"
+check("a missing setting is named in the log", alerts.send("failed", ["x"], [], None, None, "t", log=logs.append) is False
+      and "missing setting(s) ALERT_FROM_EMAIL" in logs[-1])
+os.environ["ALERT_FROM_EMAIL"] = '"Jarvis <jarvis@example.com>"'
+posted = {}
+
+
+class FakeResendResp:
+    def __init__(self, code, text=""):
+        self.status_code, self.text = code, text
+
+
+real_post = alerts.requests.post
+alerts.requests.post = lambda url, timeout, headers, json: posted.update(json=json, auth=headers["Authorization"]) or FakeResendResp(403, '{"message":"The example.com domain is not verified"}')
+check("Resend's rejection reason is logged, not reported as sent",
+      alerts.send("failed", ["x"], [], None, None, "t", log=logs.append) is False and "domain is not verified" in logs[-1])
+check("quotes and spaces around settings are removed",
+      posted["json"]["from"] == "Jarvis <jarvis@example.com>" and posted["auth"] == "Bearer re_test")
+alerts.requests.post = lambda url, timeout, headers, json: FakeResendResp(200)
+check("a delivered alert is reported as sent", alerts.send("failed", ["x"], [], None, None, "t", log=logs.append) is True)
+alerts.requests.post = real_post
+check("settings report lists names only", "ALERT_FROM_EMAIL" in alerts.settings_report() and "re_test" not in alerts.settings_report())
+for n in ("RESEND_API_KEY", "ALERT_TO_EMAIL", "ALERT_FROM_EMAIL"):
+    os.environ.pop(n, None)
+
 # --- 9c. the Catalyst Job function, end to end, with a fake SDK and bucket ------
 import types  # noqa: E402
 BUCKET = {}
