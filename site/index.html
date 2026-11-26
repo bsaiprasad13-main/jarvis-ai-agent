@@ -388,7 +388,8 @@ td.num { font-variant-numeric: tabular-nums; font-family: var(--mono); font-size
 
   // ------------------------------------------------------- ask jarvis (RAG)
   const STOP = new Set("a an and are as at be by did do does for from has have how i in is it its me of on or so that the their this to was were what when where which who why will with you your about any new latest week today".split(" "));
-  const words = (t) => String(t || "").toLowerCase().split(/[^a-z0-9.+#]+/).filter((w) => w.length > 1 && !STOP.has(w));
+  const stem = (w) => (w.length > 4 ? w.replace(/(ing|ed|es|s)$/, "") : w);   // raises / raised / raising -> rais
+  const words = (t) => String(t || "").toLowerCase().split(/[^a-z0-9.+#]+/).filter((w) => w.length > 1 && !STOP.has(w)).map(stem);
   let corpus = [], df = {}, avgLen = 1;
   function buildCorpus(recs) {
     const seen = new Map();
@@ -474,10 +475,14 @@ td.num { font-variant-numeric: tabular-nums; font-family: var(--mono); font-size
     // harness check on the answer: only citations to the stories shown are allowed
     const cited = [...text.matchAll(/\[(\d+)\]/g)].map((m) => +m[1]);
     const valid = [...new Set(cited.filter((n) => n >= 1 && n <= hits.length))];
+    const prose = text.replace(/\[\d+\]/g, " ").replace(/not_in_briefs/gi, " ").trim().split(/\s+/).filter((w) => /[a-z]/i.test(w));
     let verdict;
-    if (/NOT_IN_BRIEFS/.test(text) || !text.trim()) {
+    if (/not_in_briefs/i.test(text) && prose.length < 6 || !text.trim()) {
       $("bubble").textContent = "That isn't covered in my briefs. The closest stories are below.";
       verdict = "Check: the model said the briefs don't answer this, so nothing was made up.";
+    } else if (prose.length < 6) {
+      $("bubble").textContent = "The on-device model didn't produce a real answer, so I won't show it. The closest stories are below.";
+      verdict = "Check failed: no actual sentence, only citation marks, so code replaced it.";
     } else if (!valid.length) {
       $("bubble").textContent = "I couldn't answer that from my briefs with a source, so I won't guess. The closest stories are below.";
       verdict = "Check failed: the answer cited no story, so code replaced it.";
