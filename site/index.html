@@ -4,229 +4,175 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Jarvis AI Agent</title>
-<meta name="description" content="A multi-agent AI brief with an independent evaluator, a code-checked harness, and a chat that runs on your own device.">
+<meta name="description" content="A daily AI brief written by AI agents, checked by an independent AI model and verified by code.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap">
 <style>
-/* Layout: one reading column. A run picker at the top, then digest, desks, evaluator and report card for the chosen run. */
+/* One page: a short intro, a row of days, and the chosen day's report. */
 :root {
-  --paper: #f5f6f9; --surface: #ffffff; --ink: #151821; --muted: #5a6273; --line: #dde1e9;
-  --agent: #2b54d6; --agent-soft: #e7ecfb; --edit: #c0244a; --edit-soft: #fbe9ee; --pass: #12775a; --pass-soft: #e2f3ec;
-  --warn: #9a5b00; --warn-soft: #fbf0dc;
+  --paper: #f6f7fb; --surface: #ffffff; --ink: #141722; --muted: #5d6577; --line: #e2e5ee;
+  --accent: #4f46e5; --accent-2: #0ea5e9; --accent-soft: #eef0ff;
+  --ok: #0f7a55; --ok-soft: #e3f5ec; --warn: #995c00; --warn-soft: #fcf1dd;
+  --tools: #7c3aed; --tools-soft: #f2ecff; --ai: #0369a1; --ai-soft: #e3f2fb; --india: #c2410c; --india-soft: #fdeee4;
   --display: "Space Grotesk", "Segoe UI", system-ui, sans-serif;
   --body: "Inter", "Segoe UI", system-ui, sans-serif;
-  --mono: "JetBrains Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
   color-scheme: light;
 }
-@media (prefers-color-scheme: dark) { :root {
-  --paper: #0f1218; --surface: #171b24; --ink: #e8ebf1; --muted: #9aa3b4; --line: #2a303c;
-  --agent: #8aa4ff; --agent-soft: #1d2540; --edit: #ff7393; --edit-soft: #3a1a24; --pass: #52cfa0; --pass-soft: #12302a;
-  --warn: #f0b45a; --warn-soft: #33270f; color-scheme: dark } }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --paper: #0e1117; --surface: #161a23; --ink: #eceef4; --muted: #9ba3b5; --line: #262c39;
+  --accent: #8b8cff; --accent-2: #38bdf8; --accent-soft: #1d1f3d;
+  --ok: #4fd1a1; --ok-soft: #10302a; --warn: #f2b65c; --warn-soft: #33270f;
+  --tools: #b794ff; --tools-soft: #261c40; --ai: #6cc4f5; --ai-soft: #10283a; --india: #fb9a64; --india-soft: #36200f;
+  color-scheme: dark } }
+:root[data-theme="dark"] {
+  --paper: #0e1117; --surface: #161a23; --ink: #eceef4; --muted: #9ba3b5; --line: #262c39;
+  --accent: #8b8cff; --accent-2: #38bdf8; --accent-soft: #1d1f3d;
+  --ok: #4fd1a1; --ok-soft: #10302a; --warn: #f2b65c; --warn-soft: #33270f;
+  --tools: #b794ff; --tools-soft: #261c40; --ai: #6cc4f5; --ai-soft: #10283a; --india: #fb9a64; --india-soft: #36200f;
+  color-scheme: dark }
 
 * { box-sizing: border-box; }
 html, body { margin: 0; }
 body { background: var(--paper); color: var(--ink); font: 400 15px/1.6 var(--body); }
-.wrap { max-width: 1000px; margin: 0 auto; padding-block: 40px 64px;
-  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
-h1, h2, h3, h4 { font-family: var(--display); text-wrap: balance; margin: 0; line-height: 1.2; }
-h1 { font-size: clamp(30px, 5vw, 44px); font-weight: 700; letter-spacing: -0.01em; }
-h2 { font-size: 22px; font-weight: 600; }
-h3 { font-size: 16px; font-weight: 600; }
-h4 { font-size: 14px; font-weight: 600; }
+.wrap { max-width: 920px; margin: 0 auto; padding: 20px max(16px, env(safe-area-inset-right, 0px)) 64px max(16px, env(safe-area-inset-left, 0px)); }
+h1, h2, h3 { font-family: var(--display); margin: 0; line-height: 1.15; text-wrap: balance; }
 p { margin: 0; }
-a { color: var(--agent); }
-a:focus-visible, button:focus-visible { outline: 2px solid var(--agent); outline-offset: 2px; border-radius: 4px; }
-code { font-family: var(--mono); font-size: 0.9em; }
-.eyebrow { font: 500 12px/1 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
-.lead { font-size: 17px; color: var(--muted); max-width: 68ch; }
-.muted { color: var(--muted); }
-section { display: grid; gap: 16px; margin-top: 52px; }
-.section-head { display: grid; gap: 6px; }
-.section-head p { color: var(--muted); max-width: 68ch; }
-header { display: grid; gap: 14px; }
-.links { display: flex; gap: 16px; flex-wrap: wrap; font-size: 14px; }
+a { color: var(--accent); }
+a:focus-visible, button:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
+svg.i { width: 18px; height: 18px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 
-/* how it works */
-.flow { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
-@media (max-width: 760px) { .flow { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-.node { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px; display: grid; gap: 4px; align-content: start; min-width: 0; }
-.node b { font-family: var(--display); font-weight: 600; }
-.node span { font-size: 13.5px; color: var(--muted); }
-.node.code { border-style: dashed; }
+/* top bar */
+.bar { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.brand { display: flex; align-items: center; gap: 10px; font: 700 18px/1 var(--display); }
+.logo { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; color: #fff;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2)); font: 700 17px/1 var(--display); }
+.gh { display: inline-flex; align-items: center; gap: 7px; font: 500 14px/1 var(--body); color: var(--ink); text-decoration: none;
+  border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 9px 14px; }
+.gh:hover { border-color: var(--accent); }
 
-/* run picker */
-.runs { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; }
-.run-btn { flex: 0 0 auto; display: grid; gap: 2px; text-align: left; font: inherit; color: var(--ink); background: var(--surface);
-  border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; cursor: pointer; min-width: 150px; }
-.run-btn small { font: 400 12px/1.3 var(--mono); color: var(--muted); }
-.run-btn[aria-pressed="true"] { border-color: var(--agent); box-shadow: inset 0 0 0 1px var(--agent); }
-.run-btn .kind { font: 500 11px/1 var(--mono); letter-spacing: 0.05em; text-transform: uppercase; color: var(--agent); }
-.run-btn.pipeline .kind { color: var(--muted); }
+/* intro */
+.hero { margin-top: 40px; display: grid; gap: 14px; }
+.hero h1 { font-size: clamp(30px, 6vw, 46px); font-weight: 700; letter-spacing: -0.02em; }
+.hero h1 span { background: linear-gradient(90deg, var(--accent), var(--accent-2)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.hero p { font-size: 17px; color: var(--muted); max-width: 60ch; }
+.steps { margin-top: 10px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+@media (max-width: 700px) { .steps { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.step { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 14px; display: grid; gap: 8px; align-content: start; }
+.step .ic { width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent); }
+.step b { font: 600 15px/1.2 var(--display); }
+.step span { font-size: 13.5px; color: var(--muted); line-height: 1.45; }
 
-.meta { display: flex; flex-wrap: wrap; gap: 8px; }
-.chip { font: 500 12px/1 var(--mono); padding: 6px 9px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); background: var(--surface); }
-.chip.ok { color: var(--pass); border-color: var(--pass); }
-.chip.warn { color: var(--warn); border-color: var(--warn); }
-.chip.bad { color: var(--edit); border-color: var(--edit); }
+/* day picker */
+.days-head { margin-top: 44px; display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.days-head h2 { font-size: 22px; }
+.days { margin-top: 12px; display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; }
+.days::-webkit-scrollbar { display: none; }
+.day { flex: 0 0 auto; font: inherit; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
+  padding: 10px 14px; cursor: pointer; display: grid; gap: 1px; text-align: left; min-width: 112px; }
+.day small { font-size: 12px; color: var(--muted); }
+.day b { font: 600 15px/1.3 var(--display); }
+.day[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+.day[aria-pressed="true"] small { color: rgba(255,255,255,.85); }
 
-/* digest */
-.digest { display: grid; gap: 24px; }
-.dsec { display: grid; gap: 10px; }
-.dsec h3 { font: 500 13px/1.2 var(--mono); letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); }
-.items { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-@media (max-width: 760px) { .items { grid-template-columns: minmax(0, 1fr); } }
-.item { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0; }
-.item a.t { font-weight: 600; color: var(--ink); text-decoration: none; overflow-wrap: anywhere; }
-.item a.t:hover { text-decoration: underline; }
-.src { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font: 400 12px/1 var(--mono); color: var(--muted); }
-.badge { font: 500 11px/1 var(--mono); padding: 4px 7px; border-radius: 4px; background: var(--pass-soft); color: var(--pass); }
-.badge.retry { background: var(--warn-soft); color: var(--warn); }
-.badge.fail { background: var(--edit-soft); color: var(--edit); }
-.item p { font-size: 14px; color: var(--muted); }
-.note { font-size: 14px; color: var(--muted); background: var(--surface); border: 1px dashed var(--line); border-radius: 10px; padding: 12px 14px; }
+/* report */
+.report { margin-top: 18px; background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: clamp(16px, 4vw, 28px); display: grid; gap: 26px; }
+.r-head { display: grid; gap: 10px; }
+.r-head h2 { font-size: clamp(22px, 4vw, 28px); }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { display: inline-flex; align-items: center; gap: 6px; font: 500 13px/1 var(--body); padding: 7px 11px; border-radius: 999px; background: var(--paper); color: var(--muted); }
+.chip svg.i { width: 15px; height: 15px; }
+.chip.ok { background: var(--ok-soft); color: var(--ok); }
+.chip.warn { background: var(--warn-soft); color: var(--warn); }
+.older { font-size: 14px; color: var(--muted); background: var(--paper); border-radius: 12px; padding: 12px 14px; }
 
-/* desks */
-.desks { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-items: start; }
-@media (max-width: 860px) { .desks { grid-template-columns: minmax(0, 1fr); } }
-.desk { display: grid; gap: 12px; min-width: 0; }
-.desk-head { display: grid; gap: 4px; }
-.attempt { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px; display: grid; gap: 12px; min-width: 0; }
-.attempt.failed { border-color: var(--edit); border-style: dashed; }
-.attempt-head { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; align-items: baseline; }
-.facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1px; background: var(--line); border-radius: 8px; overflow: hidden; }
-.fact { background: var(--surface); padding: 8px 10px; display: grid; gap: 1px; }
-.fact b { font: 600 18px/1.1 var(--display); font-variant-numeric: tabular-nums; }
-.fact span { font-size: 12px; color: var(--muted); }
-.err { font: 400 12.5px/1.5 var(--mono); color: var(--edit); overflow-wrap: anywhere; }
-details { border-top: 1px solid var(--line); padding-top: 10px; }
-summary { cursor: pointer; font-weight: 500; font-size: 14px; }
-.list { margin: 8px 0 0; padding-left: 18px; font-size: 13.5px; color: var(--muted); display: grid; gap: 3px; }
-.draft { display: grid; gap: 8px; padding-top: 10px; border-top: 1px solid var(--line); }
-.draft-head { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; align-items: baseline; }
-.score { font: 600 14px/1 var(--mono); padding: 5px 9px; border-radius: 6px; }
-.score.no { background: var(--edit-soft); color: var(--edit); }
-.score.yes { background: var(--pass-soft); color: var(--pass); }
-.rubric { display: grid; gap: 4px; }
-.dim { display: grid; grid-template-columns: 78px minmax(0, 1fr) 22px; gap: 8px; align-items: center; font-size: 12.5px; }
-.dim .bar { height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; }
-.dim .bar i { display: block; height: 100%; background: var(--agent); }
-.dim .bar i.low { background: var(--edit); }
-.dim span:last-child { font-family: var(--mono); text-align: right; font-variant-numeric: tabular-nums; }
-.mark { border-left: 3px solid var(--edit); padding-left: 10px; font-size: 13.5px; display: grid; gap: 2px; }
-.mark .fix { color: var(--muted); }
-.lesson { background: var(--agent-soft); border-radius: 8px; padding: 10px 12px; font-size: 13.5px; }
+.sec { display: grid; gap: 12px; }
+.sec-head { display: flex; align-items: center; gap: 10px; }
+.sec-head .ic { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; }
+.sec-head h3 { font-size: 18px; }
+.sec-head .n { margin-left: auto; font-size: 13px; color: var(--muted); }
+.tools .ic { background: var(--tools-soft); color: var(--tools); }
+.ai .ic { background: var(--ai-soft); color: var(--ai); }
+.india .ic { background: var(--india-soft); color: var(--india); }
+.tools .card { border-left-color: var(--tools); } .ai .card { border-left-color: var(--ai); } .india .card { border-left-color: var(--india); }
+.cards { display: grid; gap: 10px; }
+.card { border: 1px solid var(--line); border-left: 3px solid; border-radius: 12px; padding: 14px 16px; display: grid; gap: 6px; min-width: 0; }
+.card .t { font: 600 16px/1.35 var(--body); color: var(--ink); text-decoration: none; overflow-wrap: anywhere; }
+.card a.t:hover { color: var(--accent); }
+.card a.t svg.i { width: 14px; height: 14px; vertical-align: -1px; margin-left: 4px; color: var(--muted); }
+.card p { font-size: 14.5px; color: var(--muted); }
+.meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; font-size: 12.5px; color: var(--muted); }
+.meta span { display: inline-flex; align-items: center; gap: 4px; }
+.meta svg.i { width: 13px; height: 13px; }
+.meta a { color: var(--muted); }
+.empty { font-size: 14px; color: var(--muted); border: 1px dashed var(--line); border-radius: 12px; padding: 12px 14px; }
 
-/* report card */
-.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
-table { border-collapse: collapse; width: 100%; min-width: 560px; font-size: 14px; }
-th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
-tr:last-child td { border-bottom: 0; }
-th { font: 500 12px/1.2 var(--mono); letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); }
-td.ev { color: var(--muted); font-size: 13px; overflow-wrap: anywhere; }
-footer { margin-top: 56px; padding-top: 18px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13px; display: grid; gap: 4px; }
-@media (prefers-reduced-motion: no-preference) { .run-btn { transition: border-color .15s; } }
-details.how { margin-top: 8px; border-top: 1px solid var(--line); padding-top: 12px; }
-details.how > summary { font: 600 15px/1.3 var(--display); color: var(--agent); }
-.nav { display: flex; gap: 6px 16px; flex-wrap: wrap; font-size: 14px; }
-.bg { font-size: 12.5px; color: var(--muted); }
-.bg a { color: var(--muted); }
-/* chat */
-.chat { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px; display: grid; gap: 12px; }
-.chat-row { display: flex; gap: 8px; flex-wrap: wrap; }
-.chat input[type=text] { flex: 1 1 260px; min-width: 0; font: inherit; color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; }
-.btn { font: 500 14px/1 var(--body); color: var(--surface); background: var(--agent); border: 0; border-radius: 8px; padding: 11px 14px; cursor: pointer; }
-.btn.ghost { color: var(--agent); background: transparent; border: 1px solid var(--agent); }
-.btn:disabled { opacity: .55; cursor: default; }
-select { font: inherit; color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 8px; padding: 9px 10px; max-width: 100%; }
-.engine { display: flex; gap: 8px 12px; align-items: center; flex-wrap: wrap; font-size: 13.5px; color: var(--muted); }
-.progress { height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; flex: 1 1 160px; min-width: 120px; }
-.progress i { display: block; height: 100%; width: 0; background: var(--agent); }
-.answer { display: grid; gap: 10px; }
-.bubble { background: var(--paper); border-radius: 10px; padding: 12px 14px; font-size: 14.5px; white-space: pre-wrap; overflow-wrap: anywhere; }
-.cites { display: grid; gap: 6px; margin: 0; padding-left: 20px; font-size: 13.5px; color: var(--muted); }
-.stats-line { font: 400 12px/1.4 var(--mono); color: var(--muted); }
-.sr { position: absolute; left: -9999px; }
-/* monitoring */
-.mon { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
-@media (max-width: 760px) { .mon { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-.mon div { background: var(--surface); padding: 14px; display: grid; gap: 2px; min-width: 0; }
-.mon b { font: 600 24px/1.1 var(--display); font-variant-numeric: tabular-nums; }
-.mon span { font-size: 12.5px; color: var(--muted); }
-td.num { font-variant-numeric: tabular-nums; font-family: var(--mono); font-size: 13px; }
+/* how it was checked */
+details { border-top: 1px solid var(--line); padding-top: 16px; }
+summary { cursor: pointer; font: 600 15px/1.3 var(--display); color: var(--accent); display: flex; align-items: center; gap: 8px; list-style: none; }
+summary::-webkit-details-marker { display: none; }
+summary::after { content: "+"; margin-left: auto; font-size: 20px; line-height: 1; }
+details[open] summary::after { content: "–"; }
+.proof { margin-top: 14px; display: grid; gap: 14px; }
+.desks { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+@media (max-width: 640px) { .desks { grid-template-columns: minmax(0, 1fr); } }
+.desk { background: var(--paper); border-radius: 12px; padding: 12px 14px; display: grid; gap: 4px; font-size: 14px; }
+.desk b { font-family: var(--display); }
+.desk span { color: var(--muted); }
+.checks { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; font-size: 14px; }
+.checks li { display: flex; gap: 8px; align-items: flex-start; }
+.checks svg.i { margin-top: 2px; color: var(--ok); }
+.checks li.retry svg.i { color: var(--warn); }
+.checks li.fail svg.i { color: #d23c5d; }
+
+footer { margin-top: 40px; color: var(--muted); font-size: 13px; text-align: center; display: grid; gap: 4px; }
+footer a { color: var(--muted); }
+@media (prefers-reduced-motion: no-preference) { .day, .gh, .card a.t { transition: background .15s, border-color .15s, color .15s; } }
 </style>
 </head>
 <body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></symbol>
+  <symbol id="i-pen" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="m9 12 2 2 4-4"/></symbol>
+  <symbol id="i-send" viewBox="0 0 24 24"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4z"/></symbol>
+  <symbol id="i-tool" viewBox="0 0 24 24"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z"/></symbol>
+  <symbol id="i-spark" viewBox="0 0 24 24"><path d="M12 3l1.8 4.7 4.7 1.8-4.7 1.8L12 16l-1.8-4.7-4.7-1.8 4.7-1.8z"/><path d="M19 15l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z"/></symbol>
+  <symbol id="i-rocket" viewBox="0 0 24 24"><path d="M4.5 16.5c-1.5 1.3-2 5-2 5s3.7-.5 5-2c.7-.8.7-2.1-.1-2.9a2.2 2.2 0 0 0-2.9-.1z"/><path d="M12 15l-3-3a22 22 0 0 1 2-3.9A12.9 12.9 0 0 1 22 2c0 2.7-.8 7.5-6 11a22.4 22.4 0 0 1-4 2z"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m8.5 12 2.5 2.5 4.5-5"/></symbol>
+  <symbol id="i-redo" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m15 9-6 6M9 9l6 6"/></symbol>
+  <symbol id="i-book" viewBox="0 0 24 24"><path d="M2 4h6a4 4 0 0 1 4 4v12a3 3 0 0 0-3-3H2z"/><path d="M22 4h-6a4 4 0 0 0-4 4v12a3 3 0 0 1 3-3h7z"/></symbol>
+  <symbol id="i-out" viewBox="0 0 24 24"><path d="M7 17 17 7"/><path d="M8 7h9v9"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+  <symbol id="i-news" viewBox="0 0 24 24"><path d="M4 4h13v16H6a2 2 0 0 1-2-2z"/><path d="M17 8h3v10a2 2 0 0 1-2 2"/><path d="M8 8h5M8 12h5M8 16h3"/></symbol>
+  <symbol id="i-git" viewBox="0 0 24 24"><path d="M9 19c-4.3 1.4-4.3-2.5-6-3m12 5v-3.5c0-1 .1-1.4-.5-2 2.8-.3 5.5-1.4 5.5-6a4.6 4.6 0 0 0-1.3-3.2 4.2 4.2 0 0 0-.1-3.2s-1.1-.3-3.5 1.3a12.3 12.3 0 0 0-6.2 0C6.5 2.8 5.4 3.1 5.4 3.1a4.2 4.2 0 0 0-.1 3.2A4.6 4.6 0 0 0 4 9.5c0 4.6 2.7 5.7 5.5 6-.6.6-.6 1.2-.5 2V21"/></symbol>
+</svg>
+
 <div class="wrap">
-  <header>
-    <div class="eyebrow">Jarvis · daily AI brief, written and checked by agents</div>
-    <h1>Jarvis AI Agent</h1>
-    <p class="lead">Every morning at 10:00 IST, Jarvis reads the day's AI tools, AI news and India tech news and writes a short brief for engineers who build with AI. Two AI agents write it, a separate AI model checks it, and plain code makes sure the work is really finished before anything is published. It runs on Zoho Catalyst.</p>
-    <nav class="nav" aria-label="Sections"><a href="#reports">Daily reports</a><a href="#how">How it works</a><a href="#ask">Ask Jarvis</a><a href="#monitoring">Monitoring</a><a href="https://github.com/bsaiprasad13-main/jarvis-ai-agent">Source code</a></nav>
+  <div class="bar">
+    <div class="brand"><span class="logo">J</span>Jarvis</div>
+    <a class="gh" href="https://github.com/bsaiprasad13-main/jarvis-ai-agent"><svg class="i"><use href="#i-git"/></svg>Source code</a>
+  </div>
+
+  <header class="hero">
+    <h1>Your daily AI brief, <span>written by agents.</span></h1>
+    <p>Every morning at 10:00 IST, Jarvis picks the day's best AI tools, AI news and India tech stories, and tells you in one line why each one matters.</p>
+    <div class="steps">
+      <div class="step"><span class="ic"><svg class="i"><use href="#i-search"/></svg></span><b>Reads</b><span>Two AI agents pull 7 news sources and read the best articles in full.</span></div>
+      <div class="step"><span class="ic"><svg class="i"><use href="#i-pen"/></svg></span><b>Writes</b><span>Each agent picks the top stories and explains why they matter.</span></div>
+      <div class="step"><span class="ic"><svg class="i"><use href="#i-shield"/></svg></span><b>Checks</b><span>A separate AI model grades the draft and code verifies every link.</span></div>
+      <div class="step"><span class="ic"><svg class="i"><use href="#i-send"/></svg></span><b>Publishes</b><span>Only a report that passes every check appears here.</span></div>
+    </div>
   </header>
 
-  <section id="reports">
-    <div class="section-head">
-      <div class="eyebrow" id="runs-h">Daily reports</div>
-      <h2>Pick a day</h2>
-      <p>The newest report is open. Under each report, "How Jarvis made this report" shows what the agents did, what the checker sent back, and every check the system ran.</p>
-    </div>
-    <div class="runs" id="runs" role="group" aria-label="Reports"><p class="muted">Loading reports…</p></div>
-  </section>
-
-  <div id="run"></div>
-
-  <section id="how">
-    <div class="section-head">
-      <div class="eyebrow">How it works</div>
-      <h2>AI does the judgment, code does the checking</h2>
-      <p>Dashed boxes are plain code. Solid boxes are AI models.</p>
-    </div>
-    <div class="flow">
-      <div class="node"><b>1 · Two writer agents</b><span>A Global desk (Product Hunt, Hacker News, TechCrunch, VentureBeat) and an India desk (YourStory, Inc42, Business Standard) each decide what to fetch, which articles to read in full, what background to look up on Edgepedia, and when their draft is ready.</span></div>
-      <div class="node"><b>2 · An independent checker</b><span>A different AI model scores every draft on five points (grounded, specific, relevant, best picks, honest) and sends it back with exact fixes until it is good enough.</span></div>
-      <div class="node code"><b>3 · Done means done</b><span>A writer can't declare itself finished until code confirms its job is complete. If it crashes or stops half way, a backup model redoes the job, then the original simple pipeline.</span></div>
-      <div class="node code"><b>4 · Final checks and alerts</b><span>Every link was really fetched today, nothing repeats, every section is filled or explained, and the report is saved and read back. If anything fails, an email says exactly where.</span></div>
-    </div>
-  </section>
-
-  <section id="ask">
-    <div class="section-head">
-      <div class="eyebrow">Ask Jarvis (optional)</div>
-      <h2>Ask about the reports, on your own device</h2>
-      <p>Type a question to see the matching stories from every report. On a computer with Chrome or Edge you can also load a small AI model that runs inside your browser and answers in a sentence or two with sources; nothing you type leaves this page.</p>
-    </div>
-    <div class="chat">
-      <form class="chat-row" id="ask-form">
-        <label for="q" class="sr">Your question</label>
-        <input type="text" id="q" placeholder="e.g. Which Indian startups raised money?" autocomplete="off">
-        <button class="btn" type="submit">Ask</button>
-      </form>
-      <div class="engine" id="engine">
-        <select id="model-pick" aria-label="On-device model">
-          <option value="Qwen2.5-1.5B-Instruct-q4f16_1-MLC">Qwen2.5 1.5B · about 0.9 GB</option>
-          <option value="Qwen2.5-0.5B-Instruct-q4f16_1-MLC">Qwen2.5 0.5B · about 0.3 GB, faster, weaker</option>
-        </select>
-        <button class="btn ghost" type="button" id="load-model">Load on-device model</button>
-        <span id="engine-status">Not loaded: answers show the matching stories only.</span>
-        <span class="progress" id="progress" hidden><i></i></span>
-      </div>
-      <div class="answer" id="answer" aria-live="polite"></div>
-    </div>
-  </section>
-
-  <section id="monitoring">
-    <div class="section-head">
-      <div class="eyebrow">Monitoring</div>
-      <h2>How the system behaves over time</h2>
-      <p>Worked out in your browser from every agent report on this page: AI model speed and failures, how often the checker sends work back, and what the system caught.</p>
-    </div>
-    <div id="mon"><p class="muted">Loading…</p></div>
-  </section>
+  <div class="days-head"><h2>Daily reports</h2></div>
+  <div class="days" id="days" role="group" aria-label="Pick a day"></div>
+  <main class="report" id="report"><p class="empty">Loading the latest report…</p></main>
 
   <footer>
-    <p>Runs daily on Zoho Catalyst (Job Scheduling + Stratus). Built with Python, Gemini function calling and the Edgepedia API; this page is hosted on GitHub Pages and the chat runs on WebLLM.</p>
-    <p>Background summaries come from <a href="https://www.edgepedia.org">Edgepedia</a>.</p>
+    <p>Runs daily on Zoho Catalyst · Python · Gemini function calling · background from <a href="https://www.edgepedia.org">Edgepedia</a></p>
+    <p><a href="https://github.com/bsaiprasad13-main/jarvis-ai-agent">How it works, tests and design decisions →</a></p>
   </footer>
 </div>
 
@@ -235,6 +181,14 @@ td.num { font-variant-numeric: tabular-nums; font-family: var(--mono); font-size
   // Daily reports are written by the Zoho Catalyst job into this Stratus bucket (public, read-only).
   const REPORTS_BASE = "https://jarvis-reports-66495-development.zohostratus.in/reports/";
   const $ = (id) => document.getElementById(id);
+  const icon = (n) => `<svg class="i"><use href="#i-${n}"/></svg>`;
+  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+  const SECTIONS = [
+    ["section_1_tools", "AI & developer tools", "tools", "tool"],
+    ["section_2_ai_news", "AI industry news", "ai", "spark"],
+    ["section_3_india_news", "India tech & startups", "india", "rocket"],
+  ];
+
   // the first Catalyst run was stamped in UTC; show it in India time like every later run
   function toIST(id) {
     const m = /^(\d{4})-(\d{2})-(\d{2})_(\d{2})(\d{2})$/.exec(id);
@@ -242,293 +196,115 @@ td.num { font-variant-numeric: tabular-nums; font-family: var(--mono); font-size
     const d = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]) + 330 * 60000), p = (n) => String(n).padStart(2, "0");
     return `${d.getUTCFullYear()}-${p(d.getUTCMonth() + 1)}-${p(d.getUTCDate())}_${p(d.getUTCHours())}${p(d.getUTCMinutes())}`;
   }
-  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
-  const SECTIONS = [["section_1_tools", "AI & developer tools"], ["section_2_ai_news", "AI industry news"], ["section_3_india_news", "India tech & startups"]];
-  const DIMS = ["grounded", "specific", "relevant", "selection", "honest"];
-  let index = [];
+  const dateOf = (id) => id.slice(0, 10);
+  function dayLabel(date, opts) {
+    const [y, m, d] = date.split("-").map(Number);
+    return new Date(y, m - 1, d).toLocaleDateString("en-GB", opts);
+  }
+  const timeOf = (id) => { const m = /_(\d{2})(\d{2})$/.exec(id); return m ? `${m[1]}:${m[2]} IST` : ""; };
 
-  function when(id) {
-    const m = /^(\d{4})-(\d{2})-(\d{2})(?:_(\d{2})(\d{2}))?/.exec(id);
-    if (!m) return id;
-    const d = new Date(+m[1], +m[2] - 1, +m[3]);
-    const day = d.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric" });
-    return m[4] ? `${day}, ${m[4]}:${m[5]}` : day;
+  let days = [];        // one report per day, newest first
+  const cache = {};
+  const load = (e) => (cache[e.id] = cache[e.id] || fetch(e.file).then((r) => r.json()));
+
+  function renderDays(active) {
+    const today = days[0] && days[0].date;
+    $("days").innerHTML = days.map((d) => `<button class="day" data-date="${d.date}" aria-pressed="${d.date === active}">
+      <small>${d.date === today ? "Latest" : dayLabel(d.date, { weekday: "long" })}</small>
+      <b>${dayLabel(d.date, { day: "numeric", month: "short" })}</b></button>`).join("");
+    $("days").querySelectorAll("button").forEach((b) => b.addEventListener("click", () => { location.hash = b.dataset.date; }));
   }
 
-  function renderPicker(active) {
-    $("runs").innerHTML = index.slice().reverse().map((r) => {
-      const info = r.kind === "pipeline" ? "one model call, no review" :
-        `${r.stories} stories · ${r.checks_passed}/${r.checks} checks${r.recoveries ? ` · ${r.recoveries} recovered` : ""}`;
-      return `<button class="run-btn ${r.kind}" data-id="${esc(r.id)}" aria-pressed="${r.id === active}">
-        <span class="kind">${r.kind === "pipeline" ? "Before: old pipeline" : (r.mode === "daily" ? "Daily report" : "Test run")}</span>
-        <span>${esc(when(r.id))}</span><small>${esc(info)}</small></button>`;
-    }).join("");
-    $("runs").querySelectorAll("button").forEach((b) => b.addEventListener("click", () => { location.hash = "r-" + b.dataset.id; }));
-  }
-
-  function digestHtml(email, titlesOnly) {
+  function sectionsHtml(email, headlinesOnly) {
     const notes = email.section_notes || {};
-    return `<div class="digest">${SECTIONS.map(([key, title], n) => {
+    return SECTIONS.map(([key, title, cls, ic], n) => {
       const rows = email[key] || [];
-      const msg = notes[`section_${n + 1}_message`];
-      return `<div class="dsec"><h3>${title}</h3>${rows.length ? `<div class="items">${rows.map((p) => `<article class="item">
-        ${p.link ? `<a class="t" href="${esc(p.link)}" target="_blank" rel="noopener">${esc(p.title)}</a>` : `<span class="t" style="font-weight:600">${esc(p.title)}</span>`}
-        <div class="src">${esc(p.source || "")}${p.read ? '<span class="badge">read in full</span>' : ""}</div>
-        ${titlesOnly ? "" : `<p>${esc(p.why_it_matters)}</p>`}
-        ${p.background ? `<div class="bg">Background: <a href="${esc(p.background.url)}" target="_blank" rel="noopener">${esc(p.background.title)}</a> · Edgepedia</div>` : ""}</article>`).join("")}</div>` : ""}${msg ? `<p class="note">${esc(msg)}</p>` : (!rows.length ? '<p class="note">Nothing in this section.</p>' : "")}</div>`;
-    }).join("")}</div>`;
+      // a note is shown only when the section was quiet or a source failed, never for a normal day
+      const status = notes[`section_${n + 1}_status`] || "normal";
+      const raw = notes[`section_${n + 1}_message`];
+      const msg = status !== "normal" && raw && !/^normal$/i.test(raw.trim()) ? raw : "";
+      return `<section class="sec ${cls}">
+        <div class="sec-head"><span class="ic">${icon(ic)}</span><h3>${title}</h3><span class="n">${rows.length} ${rows.length === 1 ? "story" : "stories"}</span></div>
+        ${rows.length ? `<div class="cards">${rows.map((p) => `<article class="card">
+          ${p.link ? `<a class="t" href="${esc(p.link)}" target="_blank" rel="noopener">${esc(p.title)}${icon("out")}</a>` : `<span class="t">${esc(p.title)}</span>`}
+          ${!headlinesOnly && p.why_it_matters ? `<p>${esc(p.why_it_matters)}</p>` : ""}
+          <div class="meta"><span>${icon("news")}${esc(p.source || "")}</span>
+            ${p.read ? `<span>${icon("book")}Read in full</span>` : ""}
+            ${p.background ? `<span>Background: <a href="${esc(p.background.url)}" target="_blank" rel="noopener">${esc(p.background.title)}</a></span>` : ""}</div>
+        </article>`).join("")}</div>` : ""}
+        ${msg ? `<p class="empty">${esc(msg)}</p>` : (!rows.length ? '<p class="empty">Nothing worth your time here today.</p>' : "")}
+      </section>`;
+    }).join("");
   }
 
-  function attemptHtml(a) {
-    const ok = a.met_contract;
-    const sources = Object.entries(a.sources || {}).map(([n, s]) => `${esc(n)}: ${s.ok ? s.count + " new" : "failed"}`);
-    const drafts = (a.drafts || []).map((d, i) => `<div class="draft">
-      <div class="draft-head"><h4>Draft ${i + 1} · ${d.accepted ? "accepted" : "rejected"}</h4><span class="score ${d.accepted ? "yes" : "no"}">${d.score}/10</span></div>
-      <p class="muted" style="font-size:12.5px">Evaluator: <code>${esc(d.evaluator_model || "unavailable")}</code>${d.independent ? " · different model from the writer" : " · <b>same model as the writer</b>"} · ${(d.picks || []).filter((p) => p.read).length}/${(d.picks || []).length} picks read in full</p>
-      <div class="rubric">${DIMS.map((k) => { const s = (d.rubric?.[k]?.score) || 0; return `<div class="dim" title="${esc(d.rubric?.[k]?.evidence || "")}"><span>${k}</span><span class="bar"><i class="${s < 3 ? "low" : ""}" style="width:${s * 20}%"></i></span><span>${s}</span></div>`; }).join("")}</div>
-      ${(d.rule_errors || []).map((e) => `<div class="mark"><span><b>Rule:</b> ${esc(e)}</span></div>`).join("")}
-      ${(d.issues || []).slice(0, 3).map((x) => `<div class="mark"><span>${x.item_id ? `<code>${esc(x.item_id)}</code> ` : ""}${esc(x.problem)}</span>${x.fix ? `<span class="fix">Fix: ${esc(x.fix)}</span>` : ""}</div>`).join("")}
-    </div>`).join("");
-    const reads = Object.values(a.read || {});
-    return `<div class="attempt ${ok ? "" : "failed"}">
-      <div class="attempt-head"><h3>${a.role === "reserve" ? "Reserve" : "Writer"} · <code>${esc(a.model)}</code></h3>
-        <span class="badge ${ok ? "" : "fail"}">${ok ? "met its contract" : "did not meet its contract"}</span></div>
-      ${a.error ? `<p class="err">${esc(a.error.split("\n")[0].slice(0, 160))}</p>` : ""}
-      ${!ok && a.missing?.filter((m) => !m.startsWith("crashed:")).length ? `<ul class="list">${a.missing.filter((m) => !m.startsWith("crashed:")).slice(0, 4).map((m) => `<li>${esc(m.split("\n")[0].slice(0, 160))}</li>`).join("")}</ul>` : ""}
-      <div class="facts">
-        <div class="fact"><b>${a.stories_considered ?? 0}</b><span>stories considered</span></div>
-        <div class="fact"><b>${reads.length}</b><span>articles read</span></div>
-        <div class="fact"><b>${a.steps ?? 0}</b><span>steps · ${a.seconds ?? 0}s</span></div>
-      </div>
-      ${a.finish_refusals ? `<p class="muted" style="font-size:13.5px">Tried to finish early ${a.finish_refusals}× and was refused by the done-check.</p>` : ""}
-      ${sources.length ? `<details><summary>Sources and articles read</summary><ul class="list">${sources.map((s) => `<li>${s}</li>`).join("")}</ul>${reads.length ? `<ul class="list">${reads.map((t) => `<li>Read: ${esc(t)}</li>`).join("")}</ul>` : ""}</details>` : ""}
-      ${drafts}
-      ${(a.lessons || []).map((l) => `<p class="lesson"><b>Lesson saved for tomorrow:</b> ${esc(l)}</p>`).join("")}
-    </div>`;
+  function proofHtml(t) {
+    const desks = t.desks.map((d) => {
+      const tries = d.attempts.length, last = d.attempts[d.attempts.length - 1] || {};
+      const drafts = d.attempts.flatMap((a) => a.drafts || []);
+      const best = drafts.filter((x) => x.accepted).pop() || drafts[drafts.length - 1];
+      const reads = d.attempts.reduce((n, a) => n + Object.keys(a.read || {}).length, 0);
+      const who = d.written_by === "pipeline" ? "the backup pipeline" : (tries > 1 ? "the reserve agent" : "the writer agent");
+      return `<div class="desk"><b>${esc(d.title)}</b>
+        <span>Written by ${who}${last.model ? ` (${esc(last.model)})` : ""}</span>
+        <span>${reads} articles read in full${best ? ` · checker score ${best.score}/10` : ""}${drafts.length > 1 ? ` · ${drafts.length} drafts` : ""}</span></div>`;
+    }).join("");
+    const checks = t.report_card.map((c) => {
+      const cls = c.passed ? "" : (c.final === false ? "retry" : "fail");
+      const ic = c.passed ? "check" : (c.final === false ? "redo" : "x");
+      const note = !c.passed && c.final === false ? " — failed once, fixed automatically" : "";
+      return `<li class="${cls}">${icon(ic)}<span>${esc(c.check)}${note}</span></li>`;
+    }).join("");
+    return `<details><summary>${icon("shield")}How this report was checked</summary>
+      <div class="proof"><div class="desks">${desks}</div><ul class="checks">${checks}</ul></div></details>`;
   }
 
-  function reportHtml(card) {
-    return `<div class="table-wrap"><table><thead><tr><th>Result</th><th>Check</th><th>Evidence</th></tr></thead><tbody>${card.map((c) => {
-      const tag = c.passed ? ["PASS", ""] : (c.final === false ? ["RETRIED", "retry"] : ["FAIL", "fail"]);
-      return `<tr><td><span class="badge ${tag[1]}">${tag[0]}</span></td><td>${esc(c.check)}</td><td class="ev">${esc(String(c.evidence).split("\n")[0].slice(0, 200))}</td></tr>`;
-    }).join("")}</tbody></table></div>`;
-  }
-
-  async function show(id) {
-    const entry = index.find((r) => r.id === id) || index[index.length - 1];
-    if (!entry) return;
-    renderPicker(entry.id);
-    $("run").innerHTML = '<section><p class="muted">Loading run…</p></section>';
+  async function show(date) {
+    const day = days.find((d) => d.date === date) || days[0];
+    if (!day) return;
+    renderDays(day.date);
+    $("report").innerHTML = '<p class="empty">Loading…</p>';
     let rec;
-    try { rec = await load(entry); }
-    catch (e) { $("run").innerHTML = '<section><p class="note">This run file could not be loaded. Try another run.</p></section>'; return; }
+    try { rec = await load(day.entry); }
+    catch (e) { $("report").innerHTML = '<p class="empty">This report could not be loaded. Try another day.</p>'; return; }
+    const title = dayLabel(day.date, { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+    const count = SECTIONS.reduce((n, [k]) => n + (rec.email[k] || []).length, 0);
     if (rec.kind === "pipeline") {
-      $("run").innerHTML = `<section><div class="section-head"><div class="eyebrow">Before · ${esc(when(rec.id))}</div>
-        <h2>The old pipeline's email</h2><p>${esc(rec.note || "One model call over the headlines, no reading, no review. Shown for comparison.")} It was written for a different reader, so only the picks are shown.</p></div>${digestHtml(rec.email, true)}</section>`;
+      $("report").innerHTML = `<div class="r-head"><h2>${title}</h2>
+        <div class="chips"><span class="chip">${icon("news")}${count} headlines</span></div>
+        <p class="older">Made by the earlier version of Jarvis, before the agents: one AI call over the headlines, with no reading and no checking. Only the headlines are shown.</p></div>
+        ${sectionsHtml(rec.email, true)}`;
       return;
     }
     const t = rec.trace, finals = t.report_card.filter((c) => c.final !== false);
-    const passed = finals.filter((c) => c.passed).length, retried = t.report_card.filter((c) => c.final === false && !c.passed).length;
-    const stories = SECTIONS.reduce((n, [k]) => n + (rec.email[k] || []).length, 0);
-    $("run").innerHTML = `
-      <section><div class="section-head"><div class="eyebrow">${rec.mode === "daily" ? "Daily report" : "Test run"} · ${esc(when(rec.id))}</div><h2>The brief</h2></div>
-        <div class="meta"><span class="chip">${stories} stories</span>
-          <span class="chip ${passed === finals.length ? "ok" : "bad"}">${passed}/${finals.length} checks passed</span>
-          ${retried ? `<span class="chip warn">${retried} problem${retried > 1 ? "s" : ""} fixed automatically</span>` : ""}<span class="chip">made in ${t.seconds}s</span></div>
-        ${digestHtml(rec.email)}
-        <details class="how"><summary>How Jarvis made this report</summary>
-          <p class="muted" style="font-size:14px;margin:10px 0">Each box is one attempt by one AI model. A failed attempt is handed to the next model. Hover a score bar to see the checker's reason.</p>
-          <div class="desks">${t.desks.map((d) => `<div class="desk"><div class="desk-head"><h3>${esc(d.title)}</h3>
-            <p class="muted" style="font-size:14px">Written by the ${d.written_by === "pipeline" ? "original pipeline (all agent writers failed)" : esc(d.written_by)}.</p></div>
-            ${d.attempts.map(attemptHtml).join("")}</div>`).join("")}</div>
-          <h3 style="margin:18px 0 8px">Every check the system ran</h3>
-          <p class="muted" style="font-size:14px;margin-bottom:8px">RETRIED means an attempt failed and the system recovered by handing the work to the next model.</p>
-          ${reportHtml(t.report_card)}
-        </details></section>`;
-  }
-
-  // ---------------------------------------------------------------- data
-  const records = {};
-  async function load(entry) {
-    if (!records[entry.id]) records[entry.id] = fetch(entry.file).then((r) => r.json()).then((rec) => ({ ...rec, id: entry.id }));
-    return records[entry.id];
-  }
-
-  // ---------------------------------------------------------- monitoring
-  function pct(n, d) { return d ? Math.round((100 * n) / d) + "%" : "–"; }
-  function quantile(xs, q) { if (!xs.length) return null; const a = xs.slice().sort((x, y) => x - y); return a[Math.min(a.length - 1, Math.floor(q * a.length))]; }
-  function renderMonitoring(recs) {
-    const agent = recs.filter((r) => r.kind === "agent");
-    if (!agent.length) { $("mon").innerHTML = '<p class="note">No agent runs yet.</p>'; return; }
-    const calls = agent.flatMap((r) => r.trace.model_calls || []);
-    const byModel = {};
-    calls.forEach((c) => { (byModel[c.model] = byModel[c.model] || []).push(c); });
-    const attempts = agent.flatMap((r) => r.trace.desks.flatMap((d) => d.attempts));
-    const drafts = attempts.flatMap((a) => a.drafts || []);
-    const firsts = attempts.filter((a) => (a.drafts || []).length).map((a) => a.drafts[0]);
-    const retried = agent.flatMap((r) => r.trace.report_card.filter((c) => c.final === false && !c.passed));
-    const ruleCatches = drafts.flatMap((d) => d.rule_errors || []);
-    const lowGrounded = drafts.filter((d) => (d.rubric?.grounded?.score || 5) < 3).length;
-    const refusals = attempts.reduce((n, a) => n + (a.finish_refusals || 0), 0);
-    const lookups = attempts.reduce((n, a) => n + (a.lookups || []).length, 0);
-    const secs = agent.map((r) => r.trace.seconds);
-    const tiles = [
-      [agent.length, "agent runs"],
-      [pct(firsts.filter((d) => d.accepted).length, firsts.length), "first drafts accepted by the evaluator"],
-      [retried.length, "failures recovered automatically"],
-      [Math.round(secs.reduce((a, b) => a + b, 0) / secs.length) + "s", "average run time"],
-    ];
-    const rows = Object.entries(byModel).map(([m, cs]) => {
-      const ok = cs.filter((c) => c.ok).map((c) => c.ms);
-      return `<tr><td><code>${esc(m)}</code></td><td class="num">${cs.length}</td><td class="num">${pct(ok.length, cs.length)}</td>
-        <td class="num">${ok.length ? (quantile(ok, 0.5) / 1000).toFixed(1) + "s" : "–"}</td><td class="num">${ok.length ? (quantile(ok, 0.95) / 1000).toFixed(1) + "s" : "–"}</td>
-        <td class="ev">${esc([...new Set(cs.filter((c) => !c.ok).map((c) => c.status || "network"))].join(", "))}</td></tr>`;
-    }).join("");
-    const caught = [
-      [ruleCatches.filter((e) => /read in full/.test(e)).length, "drafts sent back for being written from headlines alone"],
-      [ruleCatches.filter((e) => /does not exist|background must/.test(e)).length, "made-up story ids or background links blocked"],
-      [lowGrounded, "drafts the evaluator scored under 3 for grounding (claims the article didn't support)"],
-      [drafts.filter((d) => !d.accepted).length, "drafts rejected in total, each returned with exact fixes"],
-      [refusals, "early 'finish' calls refused by the done-check"],
-      [lookups, "Edgepedia background lookups"],
-    ];
-    $("mon").innerHTML = `<div class="mon">${tiles.map(([b, t]) => `<div><b>${esc(b)}</b><span>${esc(t)}</span></div>`).join("")}</div>
-      <h3>Model calls</h3>
-      ${rows ? `<div class="table-wrap"><table><thead><tr><th>Model</th><th>Calls</th><th>Succeeded</th><th>Median</th><th>p95</th><th>Failure codes</th></tr></thead><tbody>${rows}</tbody></table></div>` : '<p class="note">Per-call timing starts with newer runs.</p>'}
-      <h3>What the harness and evaluator caught</h3>
-      <div class="table-wrap"><table><tbody>${caught.map(([n, t]) => `<tr><td class="num" style="width:60px">${n}</td><td>${esc(t)}</td></tr>`).join("")}</tbody></table></div>`;
-  }
-
-  // ------------------------------------------------------- ask jarvis (RAG)
-  const STOP = new Set("a an and are as at be by did do does for from has have how i in is it its me of on or so that the their this to was were what when where which who why will with you your about any new latest week today".split(" "));
-  const stem = (w) => (w.length > 4 ? w.replace(/(ing|ed|es|s)$/, "") : w);   // raises / raised / raising -> rais
-  // a few words people use for the same idea map to one term
-  const SAME = { indian: "india", rais: "fund", raise: "fund", bag: "fund", net: "fund", nets: "fund", funding: "fund", fund: "fund",
-    money: "fund", investment: "fund", round: "fund", funded: "fund", tool: "tool", tools: "tool", app: "tool", launch: "launch", launche: "launch" };
-  const words = (t) => String(t || "").toLowerCase().split(/[^a-z0-9.+#]+/).filter((w) => w.length > 1 && !STOP.has(w))
-    .map(stem).map((w) => SAME[w] || w);
-  const SECTION_WORDS = { section_1_tools: "tool developer", section_2_ai_news: "ai industry news", section_3_india_news: "india startup" };
-  let corpus = [], df = {}, avgLen = 1;
-  function buildCorpus(recs) {
-    const seen = new Map();
-    recs.forEach((r) => SECTIONS.forEach(([k]) => (r.email[k] || []).forEach((p) => {
-      const doc = { title: p.title, source: p.source, link: p.link, why: r.kind === "agent" ? p.why_it_matters : "",
-        background: p.background, when: when(r.id), runId: r.id, section: SECTION_WORDS[k] };
-      seen.set(p.title.toLowerCase(), doc);                    // later runs win
-    })));
-    corpus = [...seen.values()].map((d) => ({ ...d, toks: words(`${d.title} ${d.title} ${d.section} ${d.source} ${d.why} ${d.background?.title || ""}`) }));
-    df = {};
-    corpus.forEach((d) => new Set(d.toks).forEach((w) => (df[w] = (df[w] || 0) + 1)));
-    avgLen = corpus.reduce((n, d) => n + d.toks.length, 0) / Math.max(1, corpus.length);
-  }
-  function search(q, k = 5) {
-    const qs = words(q), N = corpus.length;
-    return corpus.map((d) => {
-      let score = 0;
-      qs.forEach((w) => {
-        const f = d.toks.filter((t) => t === w).length;
-        if (!f) return;
-        const idf = Math.log(1 + (N - df[w] + 0.5) / (df[w] + 0.5));
-        score += idf * (f * 2.2) / (f + 1.2 * (0.25 + 0.75 * d.toks.length / avgLen));
-      });
-      return { d, score };
-    }).filter((x) => x.score > 0).sort((a, b) => b.score - a.score).slice(0, k).map((x) => x.d);
-  }
-  function citeList(hits) {
-    return `<ol class="cites">${hits.map((d) => `<li>${d.link ? `<a href="${esc(d.link)}" target="_blank" rel="noopener">${esc(d.title)}</a>` : esc(d.title)} <span class="muted">· ${esc(d.source)} · ${esc(d.when)}</span></li>`).join("")}</ol>`;
-  }
-
-  let engine = null, busy = false;
-  async function loadModel() {
-    const btn = $("load-model"), status = $("engine-status"), bar = $("progress");
-    if (!("gpu" in navigator) || !(await navigator.gpu.requestAdapter().catch(() => null))) {
-      status.textContent = "This browser has no WebGPU, so the on-device model can't run here. Matching stories still work.";
-      btn.disabled = true; return;
-    }
-    btn.disabled = true; $("model-pick").disabled = true; bar.hidden = false;
-    try {
-      const webllm = await import("https://cdn.jsdelivr.net/npm/@mlc-ai/web-llm@0.2.88/+esm");
-      const model = $("model-pick").value;
-      engine = await webllm.CreateMLCEngine(model, { initProgressCallback: (r) => {
-        bar.firstElementChild.style.width = Math.round((r.progress || 0) * 100) + "%";
-        status.textContent = r.text.length > 90 ? r.text.slice(0, 90) + "…" : r.text;
-      } });
-      bar.hidden = true;
-      status.textContent = `Ready: ${model.split("-q4")[0]} running on your device.`;
-    } catch (e) {
-      bar.hidden = true; btn.disabled = false; $("model-pick").disabled = false;
-      status.textContent = "The model could not load on this device (" + (e && e.message ? e.message.slice(0, 80) : "unknown error") + "). Matching stories still work.";
-    }
-  }
-
-  async function ask(q) {
-    if (busy || !q.trim()) return;
-    const hits = search(q);
-    const out = $("answer");
-    if (!hits.length) {
-      out.innerHTML = `<div class="bubble">That isn't in my briefs. Try a company, tool or topic from the runs below.</div>`;
-      return;
-    }
-    if (!engine) {
-      out.innerHTML = `<p class="muted" style="font-size:14px">Matching stories from Jarvis's briefs. Load the on-device model for a written answer.</p>${citeList(hits)}`;
-      return;
-    }
-    busy = true;
-    out.innerHTML = `<div class="bubble" id="bubble">…</div><p class="stats-line" id="check"></p>${citeList(hits)}`;
-    const ctx = hits.map((d, i) => `[${i + 1}] (${d.when}, ${d.source}) ${d.title}${d.why ? " — " + d.why.slice(0, 220) : ""}`).join("\n");
-    const messages = [
-      { role: "system", content: "You are Jarvis, answering questions about Jarvis's daily AI briefs. Use ONLY the numbered stories given. Cite every claim with its story number in square brackets, like [2]. If the stories do not answer the question, reply exactly: NOT_IN_BRIEFS. Answer in two or three short, plain sentences." },
-      { role: "user", content: `Stories:\n${ctx}\n\nQuestion: ${q}\n\nAnswer in two or three short sentences using only the stories above. After each fact, put its story number in square brackets, in this format: "Company X released a new tool [2]." If the stories don't answer the question, reply NOT_IN_BRIEFS.` },
-    ];
-    const t0 = performance.now();
-    let first = null, text = "", chunks = 0;
-    try {
-      const stream = await engine.chat.completions.create({ messages, stream: true, temperature: 0.2, max_tokens: 220 });
-      for await (const part of stream) {
-        const delta = part.choices?.[0]?.delta?.content || "";
-        if (delta) { if (first === null) first = performance.now(); text += delta; chunks++; $("bubble").textContent = text; }
-      }
-    } catch (e) { text = ""; }
-    const secs = (performance.now() - (first || t0)) / 1000;
-    // harness check on the answer: only citations to the stories shown are allowed
-    const cited = [...text.matchAll(/\[(\d+)\]/g)].map((m) => +m[1]);
-    const valid = [...new Set(cited.filter((n) => n >= 1 && n <= hits.length))];
-    const prose = text.replace(/\[\d+\]/g, " ").replace(/not_in_briefs/gi, " ").trim().split(/\s+/).filter((w) => /[a-z]/i.test(w));
-    let verdict;
-    if (/not_in_briefs/i.test(text) && prose.length < 6 || !text.trim()) {
-      $("bubble").textContent = "That isn't covered in my briefs. The closest stories are below.";
-      verdict = "Check: the model said the briefs don't answer this, so nothing was made up.";
-    } else if (prose.length < 6) {
-      $("bubble").textContent = "The on-device model didn't produce a real answer, so I won't show it. The closest stories are below.";
-      verdict = "Check failed: no actual sentence, only citation marks, so code replaced it.";
-    } else if (!valid.length) {
-      $("bubble").textContent = "I couldn't answer that from my briefs with a source, so I won't guess. The closest stories are below.";
-      verdict = "Check failed: the answer cited no story, so code replaced it.";
-    } else {
-      $("bubble").textContent = text.replace(/\[(\d+)\]/g, (m, n) => (+n >= 1 && +n <= hits.length ? m : "")).replace(/not_in_briefs/gi, "").trim();
-      verdict = `Check passed: every citation points to a story below (${valid.map((n) => "[" + n + "]").join(" ")}).`;
-    }
-    $("check").textContent = `${verdict} First token ${Math.round((first || performance.now()) - t0)} ms · about ${Math.round(chunks / Math.max(secs, 0.01))} tokens/s · on your device.`;
-    busy = false;
+    const passed = finals.filter((c) => c.passed).length;
+    const fixed = t.report_card.filter((c) => c.final === false && !c.passed).length;
+    $("report").innerHTML = `<div class="r-head"><h2>${title}</h2>
+      <div class="chips">
+        <span class="chip ${passed === finals.length ? "ok" : "warn"}">${icon("shield")}${passed === finals.length ? "All checks passed" : `${passed}/${finals.length} checks passed`}</span>
+        <span class="chip">${icon("news")}${count} stories</span>
+        ${fixed ? `<span class="chip warn">${icon("redo")}${fixed} problem${fixed > 1 ? "s" : ""} fixed automatically</span>` : ""}
+        ${timeOf(day.entry.id) ? `<span class="chip">${icon("clock")}${timeOf(day.entry.id)}</span>` : ""}
+      </div></div>
+      ${sectionsHtml(rec.email, false)}
+      ${proofHtml(t)}`;
   }
 
   async function boot() {
     const fromRepo = await fetch("data/index.json").then((r) => r.json()).catch(() => []);
-    const fromCatalyst = await fetch(REPORTS_BASE + "index.json", { cache: "no-store" }).then((r) => r.ok ? r.json() : [])
+    const fromCatalyst = await fetch(REPORTS_BASE + "index.json", { cache: "no-store" }).then((r) => (r.ok ? r.json() : []))
       .then((xs) => xs.map((x) => ({ ...x, id: x.tz ? x.id : toIST(x.id), file: REPORTS_BASE + x.file }))).catch(() => []);
-    const byId = new Map([...fromRepo, ...fromCatalyst].map((r) => [r.id, r]));
-    index = [...byId.values()].sort((x, y) => (x.id < y.id ? -1 : 1));
-    if (!index.length) { $("runs").innerHTML = '<p class="note">No reports published yet.</p>'; return; }
-    const agentRuns = index.filter((r) => r.kind !== "pipeline");
-    const latest = (agentRuns.filter((r) => r.mode === "daily").pop() || agentRuns.pop() || index[index.length - 1] || {}).id;
-    const route = () => { if (location.hash.startsWith("#r-")) show(location.hash.slice(3)); };
+    // only real daily reports (and the earlier version's emails); test runs are never shown
+    const real = [...fromRepo, ...fromCatalyst].filter((r) => r.kind === "pipeline" || r.mode === "daily");
+    const byDate = new Map();
+    real.sort((a, b) => (a.id < b.id ? -1 : 1)).forEach((r) => {
+      const cur = byDate.get(dateOf(r.id));
+      if (!cur || r.kind === "agent" || cur.kind === "pipeline") byDate.set(dateOf(r.id), r);   // an agent report beats the old email
+    });
+    days = [...byDate.entries()].map(([date, entry]) => ({ date, entry })).sort((a, b) => (a.date < b.date ? 1 : -1));
+    if (!days.length) { $("report").innerHTML = '<p class="empty">No reports published yet.</p>'; return; }
+    const route = () => show(location.hash.slice(1));
     window.addEventListener("hashchange", route);
-    if (location.hash.startsWith("#r-")) route(); else show(latest);
-    const recs = (await Promise.all(index.map((e) => load(e).catch(() => null)))).filter(Boolean);
-    renderMonitoring(recs);
-    buildCorpus(recs);
-    $("ask-form").addEventListener("submit", (e) => { e.preventDefault(); ask($("q").value); });
-    $("load-model").addEventListener("click", loadModel);
+    route();
   }
   boot();
 })();

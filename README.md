@@ -54,7 +54,7 @@ Each pick has a one- or two-line "why it matters", written from the article itse
 | **Harness** | Plain code. Gives each desk a contract, refuses `finish` until it's met, routes failures, enforces time budgets, and runs final checks. | `jarvis_agent/harness.py` |
 | **Memory** | Links already published (no repeats for 14 days), feed addresses that worked, and one lesson per desk per day, read at the start of the next run. | `jarvis_agent/store.py` (Stratus `state/memory.json`) |
 | **Agent spec** | Reader, sections and desks in one file. A new audience or new sources is a config change, not a code change. | `jarvis.config.json` |
-| **Website** | Daily reports, how each one was made, every check, a monitoring view, and an optional on-device chat. | `site/index.html` (GitHub Pages; reads reports from Stratus) |
+| **Website** | One clean page: today's report and the previous days, each with a short "How this report was checked" panel. | `site/index.html` (GitHub Pages; reads reports from Stratus) |
 
 ## 4. Why it is reliable
 
@@ -89,7 +89,7 @@ Every rule below is enforced in code, not by asking the model nicely.
   - **Needs attention:** the brief went out, but the original pipeline had to write a section because every agent writer failed.
   - **No email** when a backup model quietly took over. That's normal operation, and it's visible on the report card.
 - **A watchdog at 10:30 IST** (a second cron, same function, `watchdog=1`) checks that today's report was actually published with every check passed, and emails if not. It catches the failures a run can't report itself: Catalyst not starting the job, or stopping it hard.
-- **Monitoring on the website:** for each model, the number of calls, success rate, median and p95 response time, and failure codes. It also shows how often the checker accepts a first draft, and what the system caught: drafts written from headlines alone, made-up IDs, claims the article didn't support, and early `finish` calls.
+- **Every model call is recorded** in the run's trace (model, response time, success, failure code), saved with the report in Stratus, so latency and failure rates can be checked per model.
 
 ## 7. What changed, and what the logs taught us
 
@@ -98,7 +98,7 @@ Every rule below is enforced in code, not by asking the model nicely.
 | v1 (Sep 2026) | One-call pipeline on Catalyst: fetch, one Gemini call, email at 10:00. Ran daily. | It worked, but it wrote from headlines, repeated stories (5 repeats in 3 days despite a no-repeat rule), and nothing noticed a wrong answer. |
 | v2 | One agent with tools, plus a checker model. | Give the model choices (what to read) and an independent check. |
 | v3 | Two desk agents, a harness with contracts and fallbacks, a report card. | Specialised, parallel work, and code (not the model) decides when it's done. |
-| v4 | Spec file, Edgepedia background, per-call latency, monitoring, on-device chat. | Make it configurable, grounded and observable. |
+| v4 | Spec file, Edgepedia background, per-call timing. | Make it configurable, grounded and observable. |
 | v5 (now) | Runs on Zoho Catalyst (Job function, Job Scheduling, Stratus), with alert emails. | GitHub's scheduler starts late or skips runs, and failures need to reach me. |
 
 Fixes found by reading real run logs, each covered by a test:
@@ -125,16 +125,16 @@ Fixes found by reading real run logs, each covered by a test:
 | **Keep the original pipeline as the last fallback** | A simple, proven path means a bad day still produces a brief. |
 | **Gemini model chains** (Flash Lite writes; Flash and 3 Flash Preview back up and check) | Cheap for the bulk of the work, with different models for independence and for outages or quota limits. |
 | **Edgepedia for background** | A free, citable source, so background facts can be checked rather than generated. |
-| **Optional on-device chat** (WebLLM, Qwen2.5 1.5B on WebGPU) | Answers questions about the reports privately on the visitor's own device. It answers only from the reports and code rejects answers without a source. Without WebGPU it shows matching stories. |
+| **A simple website: reports only** | A reader should understand it in seconds. An earlier version had an on-device chat (WebLLM) and a monitoring panel; with only a few dozen stories they added confusion, not value, so they were removed. Test runs are never shown. |
 
 ## 9. Skills this project demonstrates
 
-- **Building AI agents and conversational flows:** function-calling agents with tools, contracts and edge-case handlers (early finish, crashes, half-done work, outages), plus a chat that cites its sources and declines honestly.
-- **Prompt engineering and context management:** system prompts built from a spec, scoped checker prompts, a rubric with evidence, lessons carried between runs, and retrieval (RAG) over every report for the chat.
-- **End-to-end delivery:** spec, then prompts and tools, then offline tests, then staging runs with fault injection, then production on Zoho Catalyst, then monitoring and alerts.
+- **Building AI agents and conversational flows:** function-calling agents with tools, contracts and edge-case handlers (early finish, crashes, half-done work, outages).
+- **Prompt engineering and context management:** system prompts built from a spec, scoped checker prompts, a rubric with evidence, lessons carried between runs, and retrieval of article text and Edgepedia background before writing.
+- **End-to-end delivery:** spec, then prompts and tools, then offline tests, then staging runs with fault injection, then production on Zoho Catalyst, then alerts and a watchdog.
 - **Integrations:** Gemini, Product Hunt GraphQL, the Hacker News API, five RSS feeds with self-healing fallbacks, the Edgepedia API, Resend, Zoho Catalyst (Job Scheduling, Stratus) and GitHub Pages.
-- **Optimisation from logs:** every fix in section 7 came from reading run traces and report cards; latency and failure rates are tracked per model.
-- **Low-latency and on-device AI:** a 1.5B model running in the browser on WebGPU, with time to first token and tokens per second shown for each answer.
+- **Optimisation from logs:** every fix in section 7 came from reading run traces and report cards; latency and failure rates are recorded per model call.
+- **Clear writing for users:** every story gets one plain line on why it matters, and the website is a single page anyone can read.
 
 ## 10. Run it yourself
 
