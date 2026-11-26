@@ -459,7 +459,7 @@ td.num { font-variant-numeric: tabular-nums; font-family: var(--mono); font-size
     const ctx = hits.map((d, i) => `[${i + 1}] (${d.when}, ${d.source}) ${d.title}${d.why ? " — " + d.why : ""}${d.background ? " Background: " + d.background.title : ""}`).join("\n");
     const messages = [
       { role: "system", content: "You are Jarvis, answering questions about Jarvis's daily AI briefs. Use ONLY the numbered stories given. Cite every claim with its story number in square brackets, like [2]. If the stories do not answer the question, reply exactly: NOT_IN_BRIEFS. Answer in two or three short, plain sentences." },
-      { role: "user", content: `Stories:\n${ctx}\n\nQuestion: ${q}` },
+      { role: "user", content: `Stories:\n${ctx}\n\nQuestion: ${q}\n\nAnswer in two or three short sentences using only the stories above. After each fact, put its story number in square brackets, for example: "Sarvam AI launched a dictation API for 22 Indian languages [1]." If the stories don't answer the question, reply NOT_IN_BRIEFS.` },
     ];
     const t0 = performance.now();
     let first = null, text = "", chunks = 0;
