@@ -1,0 +1,29 @@
+{
+  "last_run": "2026-11-26T13:21:13.122633+00:00",
+  "sent": {
+    "https://www.producthunt.com/products/qa-tech?utm_campaign=producthunt-api&utm_medium=api-v2&utm_source=Application%3A+PM+AI+NEWS+AGENT+%28ID%3A+297294%29": "2026-11-26T13:21:13.122607+00:00",
+    "https://www.producthunt.com/products/bifura?utm_campaign=producthunt-api&utm_medium=api-v2&utm_source=Application%3A+PM+AI+NEWS+AGENT+%28ID%3A+297294%29": "2026-11-26T13:21:13.122607+00:00",
+    "https://www.producthunt.com/products/ground-2?utm_campaign=producthunt-api&utm_medium=api-v2&utm_source=Application%3A+PM+AI+NEWS+AGENT+%28ID%3A+297294%29": "2026-11-26T13:21:13.122607+00:00",
+    "https://techcrunch.com/2026/11/25/openai-says-heavy-chatgpt-users-may-hit-limits-sooner-as-it-merges-chat-and-work/": "2026-11-26T13:21:13.122607+00:00",
+    "https://techcrunch.com/2026/11/24/walmart-teams-up-with-meta-to-bring-black-friday-deals-to-ai-agent-muse/": "2026-11-26T13:21:13.122607+00:00",
+    "https://techcrunch.com/2026/11/24/tidal-to-ban-and-remove-millions-of-ai-generated-tracks-as-ai-slop-inundates-music-streaming/": "2026-11-26T13:21:13.122607+00:00",
+    "https://yourstory.com/2026/11/phonepe-resumes-ipo-process-targets-listing-in-feb-march-12-15b-valuation": "2026-11-26T13:21:13.122607+00:00",
+    "https://inc42.com/buzz/urban-company-forays-into-ac-market-opens-pre-bookings-for-native-acs-at-%e2%82%b955499/": "2026-11-26T13:21:13.122607+00:00",
+    "https://yourstory.com/2026/11/vegapay-raises-10m-in-series-a-round-co-led-by-vertex-ventures-prosus": "2026-11-26T13:21:13.122607+00:00",
+    "https://yourstory.com/2026/11/uber-former-zomato-food-delivery-ceo-rakesh-ranjan-india-south-asia-president": "2026-11-26T13:21:13.122607+00:00",
+    "https://inc42.com/buzz/whatsapp-rolls-out-message-scheduling-up-to-14-days-in-advance/": "2026-11-26T13:21:13.122607+00:00"
+  },
+  "source_urls": {},
+  "lessons": [
+    {
+      "date": "2026-11-26",
+      "desk": "global",
+      "lesson": "When full article fetches return HTTP 403, rely on descriptive titles and other accessible articles like TechCrunch coverage for accurate summaries."
+    },
+    {
+      "date": "2026-11-26",
+      "desk": "india",
+      "lesson": "Ensure reading a mix of deep fintech infrastructure and consumer tech expansions (like Urban Company's hardware play) gives freshers a comprehensive view of PM problems across models."
+    }
+  ]
+}

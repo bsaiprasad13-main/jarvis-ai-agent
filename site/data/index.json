@@ -1,5 +1,15 @@
 [
  {
+  "id": "2026-11-26_1318",
+  "kind": "agent",
+  "mode": "daily",
+  "file": "data/2026-11-26_1318.json",
+  "stories": 11,
+  "checks_passed": 8,
+  "checks": 8,
+  "recoveries": 0
+ },
+ {
   "id": "2026-11-26_1828",
   "kind": "agent",
   "mode": "dry run",
