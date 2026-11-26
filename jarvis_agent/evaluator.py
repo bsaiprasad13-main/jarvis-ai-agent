@@ -10,7 +10,7 @@ Two layers:
    evidence. A draft passes only with no rule broken, no dimension below 3,
    grounding at 4 or more, and an average of at least 3.5 (shown as 7/10).
 """
-from . import gemini
+from . import gemini, tools
 from .config import EVALUATOR_BACKUP, EVALUATOR_MODELS
 from .desks import READER, SECTION_BRIEFS, TEST_QUESTION
 
@@ -30,7 +30,7 @@ PASS_MIN_GROUNDED = 4      # made-up details are the costliest failure, so groun
 def check_rules(state, digest):
     desk, errors, seen = state.desk, [], set()
     picks = [str(e.get("item_id")) for k in desk.sections for e in (digest.get(k) or [])]
-    read = [i for i in picks if state.items.get(i, {}).get("read_attempted")]
+    read = tools.read_picks(state, picks)
     need = min(desk.min_read, len(picks))
     if len(read) < need:
         errors.append(f"Only {len(read)} of your picks were read in full. Use read_article on at least {need} picks "
@@ -94,7 +94,7 @@ def _prompt(state, digest):
     failed = [n for n, s in state.sources.items() if not s["ok"]]
     dims = "\n".join(f'- "{k}": {v}' for k, v in RUBRIC.items())
     owned = ", ".join(state.desk.sections)
-    return f"""You are a strict, independent evaluator. A writer drafted part of a daily email digest for {READER}.
+    return f"""You are a strict, independent evaluator. A writer drafted part of a daily brief for {READER}.
 You did not write it. This writer is the {state.desk.title} and owns ONLY these sections: {owned}. Other sections
 are written by another desk, so never penalize their absence; judge only what this desk is responsible for. Judge it against this rubric, scoring each dimension 1-5 (5 = excellent, 3 = acceptable,
 1 = poor). Be demanding: most first drafts land at 3 on at least one dimension. Cite evidence for each score.

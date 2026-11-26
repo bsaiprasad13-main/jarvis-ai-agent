@@ -3,6 +3,7 @@
     python tests/test_agent.py
 """
 import json
+import logging
 import os
 import sys
 import tempfile
@@ -13,7 +14,8 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 
 from jarvis_agent import agent, evaluator, fetchers, gemini, harness, legacy, tools  # noqa: E402
-from jarvis_agent.config import DESK_MODEL, EVALUATOR_BACKUP, EVALUATOR_MODEL, EVALUATOR_MODELS, MAX_STEPS, RESERVE_MODEL  # noqa: E402
+from jarvis_agent.config import (DESK_MODEL, EVALUATOR_BACKUP, EVALUATOR_MODEL, EVALUATOR_MODELS,  # noqa: E402
+                                  MAX_ARTICLE_READS, MAX_STEPS, RESERVE_MODEL)
 from jarvis_agent.desks import GLOBAL, INDIA  # noqa: E402
 from jarvis_agent.store import Memory  # noqa: E402
 
@@ -142,7 +144,7 @@ def new_memory():
 install_fake_sources()
 gemini.ask_json = fake_ask_json
 gemini.step = fake_step
-legacy.generate_email_content = lambda items, failed: {
+legacy.write_brief = lambda items, failed: {
     "section_1_tools": [], "section_2_ai_news": [],
     "section_3_india_news": [{"title": "Old pipeline pick", "source": "YourStory",
                               "link": "https://yourstory.example/a", "why_it_matters": WHY}],
@@ -170,6 +172,37 @@ check("a desk can't fetch another desk's source", "not one of your sources" in t
 check("a desk can't write another desk's section",
       "only write your own sections" in tools.submit_sections(ist, tools=[], notes={})["error"])
 check("cannot read an article that was never fetched", "error" in tools.read_article(ist, "i99"))
+for n in INDIA.sources:
+    tools.fetch_source(ist, n)
+_session = fetchers.get_session
+fetchers.get_session = lambda: type("S", (), {"get": lambda self, url, **k: type("R", (), {"status_code": 404, "text": ""})()})()
+failed_read = tools.read_article(ist, "i1")
+fetchers.get_session = _session
+tools.read_article(ist, "i2")
+check("a page that failed to load does not count as read in full",
+      failed_read["ok"] is False and tools.read_picks(ist, ["i1", "i2"]) == ["i2"])
+ist.reads += ["x"] * MAX_ARTICLE_READS
+check("once every read is used up, attempts count (the desk did all it could)", tools.read_picks(ist, ["i1", "i2"]) == ["i1", "i2"])
+tools.TOOLS["boom"] = lambda state: 1 / 0
+check("a tool that crashes returns an error to the model instead of killing the desk",
+      "tool failed (ZeroDivisionError)" in tools.dispatch(ist, "boom", {})["error"])
+del tools.TOOLS["boom"]
+
+# --- 2a. small parts: feed parsing and duplicate detection ----------------------
+from jarvis_agent import dedup  # noqa: E402
+rss_xml = ('<rss><channel><item><title>Sarvam ships a new Indic model</title><link>https://x.example/a</link>'
+           '<pubDate>Wed, 26 Nov 2026 04:00:00 GMT</pubDate></item></channel></rss>')
+atom_xml = ('<feed xmlns="http://www.w3.org/2005/Atom"><entry><title>Atom story</title>'
+            '<link href="https://x.example/b"/><updated>2026-11-26T04:00:00Z</updated></entry></feed>')
+rss_e, atom_e = fetchers.parse_xml_feed(rss_xml), fetchers.parse_xml_feed(atom_xml)
+check("RSS and Atom feeds are both parsed",
+      rss_e and rss_e[0]["title"] == "Sarvam ships a new Indic model" and "x.example/a" in str(rss_e[0])
+      and atom_e and atom_e[0]["title"] == "Atom story" and "x.example/b" in str(atom_e[0]))
+dd = dedup.Deduplicator()
+check("the same story from two outlets is caught as a duplicate",
+      dd.add_item_if_not_duplicate({"title": "OpenAI raises $40B in new funding round", "url": "https://a"})
+      and not dd.add_item_if_not_duplicate({"title": "OpenAI raises $40B in a new funding round", "url": "https://b"})
+      and dd.add_item_if_not_duplicate({"title": "Zepto hires a new CFO", "url": "https://c"}))
 mem = new_memory()
 mem.mark_sent(["https://ph.example/notebot"])
 st2 = tools.RunState(mem, evaluator.review, GLOBAL)
@@ -222,7 +255,7 @@ check("background from Edgepedia reaches the email rows",
 check("every model call is timed for monitoring", len(trace["model_calls"]) >= 4
       and all({"model", "ms", "ok"} <= set(c) for c in trace["model_calls"]))
 check("final checks ran on the whole digest", {c["check"] for c in report.checks} >= {
-      "No story appears twice", "Every link was fetched today", "Every section is filled or honestly explained"})
+      "No story appears twice", "Every link came from today's feeds", "Every section is filled or honestly explained"})
 
 # --- 5. a desk crashes -> the reserve model takes over ----------------------
 SCRIPTS.update({("global", "writer"): global_script(first_why=WHY), ("india", "writer"): ["CRASH"],
@@ -329,10 +362,10 @@ check("report is written and read back", sorted(links) == sorted(urls) and idx[0
 ok_checks = [{"check": "Global desk: writer met its contract", "passed": False, "final": False, "evidence": "crashed: 503"},
              {"check": "No story appears twice", "passed": True, "final": True, "evidence": ""}]
 check("recovered problems alone send no alert", alerts.classify(ok_checks, {"desks": []}, None)[0] == "ok")
-bad = ok_checks + [{"check": "Every link was fetched today", "passed": False, "final": True, "evidence": "9/10 links"}]
+bad = ok_checks + [{"check": "Every link came from today's feeds", "passed": False, "final": True, "evidence": "9/10 links"}]
 st_, rs_ = alerts.classify(bad, {"desks": []}, None)
 msg = alerts.build_message(st_, rs_, bad, {"desks": []}, None, "2026-01-01_1000")
-check("a failed final check is an alert that names the check", st_ == "failed" and "Every link was fetched today" in msg
+check("a failed final check is an alert that names the check", st_ == "failed" and "Every link came from today's feeds" in msg
       and "RETRIED" in msg and "crashed: 503" in msg)
 check("backup pipeline use is flagged as degraded",
       alerts.classify(ok_checks, {"desks": [{"title": "India desk", "written_by": "pipeline"}]}, None)[0] == "degraded")
@@ -428,7 +461,9 @@ catalyst_main.handler(types.SimpleNamespace(get_all_job_params=lambda: {"mode": 
 check("Catalyst run that needed the backup pipeline alerts as degraded", sent_alerts == ["degraded"] and ctx2.result == "success")
 fake_sdk.initialize = lambda req=None: (_ for _ in ()).throw(RuntimeError("Stratus unreachable"))
 ctx3 = FakeContext()
+logging.disable(logging.CRITICAL)                  # this crash is on purpose; keep its traceback out of the output
 catalyst_main.handler(types.SimpleNamespace(get_all_job_params=lambda: {}), ctx3)
+logging.disable(logging.NOTSET)
 check("a Catalyst crash alerts as failed and marks the job failed", sent_alerts[-1] == "failed" and ctx3.result == "failure")
 ctx4 = FakeContext()
 fake_sdk.initialize = lambda req=None: types.SimpleNamespace(stratus=lambda: types.SimpleNamespace(bucket=lambda name: FakeBucket()))

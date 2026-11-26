@@ -93,7 +93,7 @@ def done_check(state):
             missing.append("The evaluator has not accepted a draft yet. Fix its feedback and call submit_sections again.")
         return missing
     picks = [str(e.get("item_id")) for k in desk.sections for e in (digest.get(k) or [])]
-    read = [i for i in picks if state.items.get(i, {}).get("read_attempted")]
+    read = read_picks(state, picks)
     if len(read) < min(desk.min_read, len(picks)):
         missing.append(f"Only {len(read)} picks were read in full; your contract needs {min(desk.min_read, len(picks))}.")
     notes = digest.get("notes") or {}
@@ -159,6 +159,15 @@ def _page_text(raw_html):
     return " ".join(text.split())
 
 
+def read_picks(state, picks):
+    """Picks that count as read in full: the page was actually fetched and had text.
+    A failed read (404, paywall, empty page) does not count, unless the desk has used every read it is
+    allowed: then it did all it could, so attempts count too."""
+    if len(state.reads) >= MAX_ARTICLE_READS:
+        return [i for i in picks if i in state.reads]
+    return [i for i in picks if state.items.get(i, {}).get("article")]
+
+
 def read_article(state, item_id):
     item_id = str(item_id)
     item = state.items.get(item_id)
@@ -169,7 +178,6 @@ def read_article(state, item_id):
     if len(state.reads) >= MAX_ARTICLE_READS:
         return {"error": f"read limit reached ({MAX_ARTICLE_READS}). Work with what you have."}
     state.reads.append(item_id)
-    item["read_attempted"] = True
     try:
         resp = fetchers.get_session().get(item["url"], timeout=12)
         if resp.status_code != 200:
@@ -296,6 +304,8 @@ def dispatch(state, name, args):
             result = fn(state, **(args or {}))
         except TypeError as e:
             result = {"error": f"bad arguments: {e}"}
+        except Exception as e:                       # a broken tool is reported to the model, not a crashed desk
+            result = {"error": f"tool failed ({type(e).__name__}); try another step"}
     state.events.append({"step": state.steps, "tool": name, "args": _short(args), "result": _short(result)})
     return result
 

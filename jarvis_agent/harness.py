@@ -38,7 +38,7 @@ class ReportCard:
         return all(c["passed"] for c in self.checks if c.get("final", True))
 
 
-def _legacy_for_desk(desk, memory, state):
+def _legacy_for_desk(desk, memory, state, deadline=None):
     """The original one-call pipeline, limited to this desk's sources and sections."""
     if state and state.items:
         items = [dict(i, section=LEGACY_SECTION.get(i["section"], "section_1")) for i in state.items.values()
@@ -52,8 +52,8 @@ def _legacy_for_desk(desk, memory, state):
     fetched = [i["url"] for i in items]
     data = None
     for _ in range(3):
-        data = legacy.generate_email_content(items, failed)
-        if data:
+        data = legacy.write_brief(items, failed)
+        if data or (deadline and time.time() + 75 > deadline):     # no time left for a wait and another call
             break
         time.sleep(15)
     if not data:
@@ -112,7 +112,7 @@ def run_desk_with_backups(desk, memory, report, log, deadline=None):
         log(f"  [{desk.key}] {role} did not meet its contract: {missing[:2]}")
     log(f"  [{desk.key}] all writers failed; running the old pipeline for this desk")
     best = max((a["state"] for a in attempts), key=lambda s: len(s.items)) if attempts else None
-    data = _legacy_for_desk(desk, memory, best)
+    data = _legacy_for_desk(desk, memory, best, deadline)
     report.add(f"{desk.title} delivered its sections", data is not None,
                "written by the old pipeline (all agent writers failed)" if data else "old pipeline also failed")
     if not data:
@@ -125,7 +125,7 @@ def run_desk_with_backups(desk, memory, report, log, deadline=None):
 
 
 def run(memory, log=print, deadline=None):
-    """Returns (email_data, sent_urls, trace). Raises only if no section could be produced at all."""
+    """Returns (brief, sent_urls, trace, report_card). Raises only if no section could be produced at all."""
     report, started = ReportCard(), time.time()
     gemini.CALLS.clear()
     with ThreadPoolExecutor(max_workers=len(DESKS)) as pool:            # desks work in parallel
@@ -152,7 +152,7 @@ def run(memory, log=print, deadline=None):
                    for k in DIGEST_KEYS),
                {SECTION_TITLES[k]: len(email.get(EMAIL_KEYS[k], [])) for k in DIGEST_KEYS})
     report.add("No story appears twice", len(urls) == len(set(urls)), f"{len(urls)} links, {len(set(urls))} unique")
-    report.add("Every link was fetched today", all(u in fetched for u in urls),
+    report.add("Every link came from today's feeds", all(u in fetched for u in urls),
                f"{sum(u in fetched for u in urls)}/{len(urls)} links found in today's fetched stories")
     report.add("The digest has stories", len(urls) > 0, f"{len(urls)} stories")
     if not urls:

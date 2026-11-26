@@ -3,7 +3,7 @@
 On Zoho Catalyst, the Job function (functions/jarvis_agent/main.py) calls run_once() every day at 10:00 IST
 and keeps reports and memory in a Stratus bucket. On a laptop:
 
-    python run.py --dry-run     # real models and sources; report saved to site/data, separate test memory
+    python run.py --test-run    # real models and sources (uses API quota); report saved to runs/, separate test memory
     python run.py               # same, but updates the local memory (data/memory.json)
 
 Either way, a failed or degraded run produces an alert (emailed when Resend is configured, otherwise printed).
@@ -61,7 +61,7 @@ def check_today(store, prefix):
 
 
 def run_once(memory, store, prefix, file_prefix, mode, save_memory, deadline=None, log=print):
-    """One full run. Returns (status, reasons, report_checks, trace, error)."""
+    """One full run. Returns (status, reasons, report_checks, trace, error, stamp)."""
     stamp = datetime.datetime.now(IST).strftime("%Y-%m-%d_%H%M")
     report_checks, trace, error = [], None, None
     log(f"=== Jarvis run {stamp} ({mode}) ===")
@@ -95,8 +95,8 @@ def run_once(memory, store, prefix, file_prefix, mode, save_memory, deadline=Non
 
 
 def main():
-    dry = "--dry-run" in sys.argv
-    site_store = LocalStorage(os.path.join(ROOT, "site"))
+    dry = "--test-run" in sys.argv or "--dry-run" in sys.argv
+    site_store = LocalStorage(os.path.join(ROOT, "runs"))          # gitignored; the website shows only Catalyst reports
     memory_path = os.path.join(ROOT, "data", "test_memory.json" if dry else "memory.json")
     status, reasons, checks, trace, error, stamp = run_once(
         Memory(memory_path), site_store, "data/", "data/", "test run" if dry else "local", save_memory=not dry,

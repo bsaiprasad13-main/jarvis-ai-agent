@@ -1,6 +1,5 @@
 {
   "name": "Jarvis",
-  "brief_title": "Jarvis: Your Daily AI Brief",
   "reader": "an engineer who builds with AI and wants to stay ahead: new tools worth trying, shifts in models and platforms (including open, local and on-device models), and moves in India's tech and startup scene",
   "test_question": "Would this genuinely help this engineer build something better or make a better call this week?",
   "sections": {

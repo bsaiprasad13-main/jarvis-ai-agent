@@ -25,7 +25,7 @@ def construct_prompt(items, failed_sources):
     keys = ["tools", "ai_news", "india_news"]
     sections = "\n".join(f"SECTION {n} ({SECTION_TITLES[k]}, items labeled section_{n}): {SECTION_BRIEFS[k]}"
                          for n, k in enumerate(keys, start=1))
-    return f"""You are writing a daily email brief for {READER}.
+    return f"""You are writing a daily brief for {READER}.
 Every pick and every explanation must answer: "{TEST_QUESTION}"
 Write in simple, friendly, everyday English with short sentences.
 
@@ -50,7 +50,7 @@ ITEMS:
 """
 
 
-def generate_email_content(items, failed_sources):
+def write_brief(items, failed_sources):
     import os
     api_key = os.environ.get("GEMINI_API_KEY")
     if not api_key:

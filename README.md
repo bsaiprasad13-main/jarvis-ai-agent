@@ -1,27 +1,34 @@
 # Jarvis AI Agent
 
-**A daily AI brief, written by AI agents, checked by an independent AI model, and verified by plain code before anything is published.** It runs every morning at 10:00 IST on Zoho Catalyst and publishes to a website.
+**A multi-agent AI system that writes a daily AI brief, checks its own work, and runs on its own every morning.**
+Two AI agents research and write, a different AI model reviews their drafts, and plain code decides when the work is
+really done. Nothing reaches the website until it passes every check.
 
-- **Website (daily reports):** https://bsaiprasad13-main.github.io/jarvis-ai-agent/
-- **Runs on:** Zoho Catalyst: a Job function started by Job Scheduling, with reports and memory in Stratus
-- **Code:** this repository
+[**Live site**](https://bsaiprasad13-main.github.io/jarvis-ai-agent/) · Runs on **Zoho Catalyst** (scheduled daily at 10:00 IST) · **62 offline tests** · MIT license
 
----
+![The Jarvis website: today's report with its checks, and the Ask Jarvis panel](docs/site.png)
 
-## 1. What it is
+## At a glance
 
-Every morning Jarvis reads seven sources (Product Hunt, Hacker News, TechCrunch, VentureBeat, YourStory, Inc42, Business Standard) and writes a short brief in three sections for an engineer who builds with AI:
+| | |
+|---|---|
+| **What it does** | Reads 7 sources (Product Hunt, Hacker News, TechCrunch, VentureBeat, YourStory, Inc42, Business Standard) and writes three short sections for an engineer who builds with AI: **AI & developer tools**, **AI industry news**, **India tech & startups**. Each pick gets one or two plain lines on why it matters. |
+| **The hard part it solves** | AI agents sound confident, say they're done when they aren't, and quietly make things up. Jarvis is built so it can't publish unchecked work, and when something breaks it recovers or says exactly where it broke. |
+| **Ask Jarvis** | A chat on the website that answers questions from the reports only, with sources. Retrieval runs in the browser; optionally a 1.5B model (WebLLM) writes the answer on the visitor's own device, and code rejects any answer that doesn't cite a real story. |
 
-- **AI & developer tools** worth trying
-- **AI industry news**: models, platforms, funding and research that change how AI is built
-- **India tech & startups**
+### How it maps to building conversational AI
 
-Each pick has a one- or two-line "why it matters", written from the article itself, plus background from [Edgepedia](https://www.edgepedia.org) where a name needs explaining.
-
-## 2. How it helps
-
-- **For the reader:** about ten minutes of reading replaces an hour of scrolling, and nothing in the brief is made up. Every link was fetched that morning, and every explanation was checked against its article.
-- **As engineering:** it is a working answer to the hardest problem with AI agents. Agents sound confident, say they're done when they aren't, and quietly make things up. Jarvis is built so that it can't publish work that hasn't been checked, and when something breaks it recovers or tells me exactly what went wrong.
+| Skill | Where it shows |
+|---|---|
+| **Agents, function calling, tools** | Two Gemini desk agents with 7 tools each decide what to fetch, read, look up and submit (`jarvis_agent/agent.py`, `tools.py`) |
+| **Prompt engineering and context management** | System prompts and the checker's rubric are built from one spec (`jarvis.config.json`); the checker is told exactly which sections each desk owns; lessons carry over to the next day |
+| **RAG and reducing hallucinations** | Desks must read the article before explaining it; models see story IDs, never URLs, so links can't be invented; background comes from a real Edgepedia lookup; the chat answers only from retrieved stories and must cite them |
+| **Edge-case handling** | Early "finish", crashes, half-done work, model outages and quota limits each have a fixed route in code, and each has a test |
+| **End-to-end deployment** | Spec → prompts and tools → offline tests → test runs with fault injection → production on Zoho Catalyst → alerts and a 10:30 watchdog |
+| **Integrations** | Gemini, Product Hunt GraphQL, Hacker News API, RSS feeds, Edgepedia API, Resend email, Zoho Catalyst (Job Scheduling, Stratus), GitHub Pages |
+| **Tuning from logs and latency** | Every model call is timed and logged with its report; each fix in section 7 came from reading run traces |
+| **Low-latency, on-device inference** | The optional chat model runs in the browser on WebGPU and shows time to first word |
+| **UX writing** | One plain line per story, a one-page site, and alert emails that say what broke in plain English |
 
 ## 3. How it works
 
@@ -50,19 +57,19 @@ Each pick has a one- or two-line "why it matters", written from the article itse
 | Part | What it does | Where |
 |---|---|---|
 | **Desk agents** | Gemini with function calling and 7 tools. Each desk owns its own sources and sections and decides what to fetch, what to read in full, what to look up, and when its draft is ready. | `jarvis_agent/agent.py`, `tools.py` |
-| **Checker** | A *different* model in a fresh context scores each draft on grounded, specific, relevant, best picks and honest, with evidence, and returns exact fixes. Grounding must score 4 or more out of 5. | `jarvis_agent/evaluator.py` |
+| **Checker** | A *different* model in a fresh context scores each draft on grounded, specific, relevant, best picks and honest, with evidence, and returns exact fixes. It sees each pick with an excerpt (first 500 characters) of any article the desk read. Grounding must score 4 or more out of 5. | `jarvis_agent/evaluator.py` |
 | **Harness** | Plain code. Gives each desk a contract, refuses `finish` until it's met, routes failures, enforces time budgets, and runs final checks. | `jarvis_agent/harness.py` |
 | **Memory** | Links already published (no repeats for 14 days), feed addresses that worked, and one lesson per desk per day, read at the start of the next run. | `jarvis_agent/store.py` (Stratus `state/memory.json`) |
 | **Agent spec** | Reader, sections and desks in one file. A new audience or new sources is a config change, not a code change. | `jarvis.config.json` |
-| **Website** | One clean page: today's report and the previous days, each with a short "How this report was checked" panel. | `site/index.html` (GitHub Pages; reads reports from Stratus) |
+| **Website** | One clean page: today's report and the previous days, each with a short "How this report was checked" panel, plus the Ask Jarvis chat. | `site/index.html` (GitHub Pages; reads reports from Stratus) |
 
 ## 4. Why it is reliable
 
 Every rule below is enforced in code, not by asking the model nicely.
 
-- **The agent can't decide it's done.** `finish` is refused until code confirms the desk's contract: every source tried, enough articles read, every section filled (or honestly marked quiet when there really is little news), and the checker's approval. The refusal lists exactly what's missing.
+- **The agent can't decide it's done.** `finish` is refused until code confirms the desk's contract: every source tried, enough articles actually read (a page that failed to load doesn't count), every section filled (or honestly marked quiet when there really is little news), and the checker's approval. The refusal lists exactly what's missing.
 - **The writer never grades itself.** The checker runs on a different model. If every independent model is unavailable, it falls back to the writer's model, and the report says so openly.
-- **It can't invent links.** Models only see story IDs like `g14`; code maps them back to the addresses it actually fetched, and a final check confirms every link was fetched that day. Background links must come from a real Edgepedia lookup.
+- **It can't invent links.** Models only see story IDs like `g14`; code maps them back to the addresses that came from that morning's feeds, and a final check confirms every published link is one of them. Background links must come from a real Edgepedia lookup.
 - **Failures follow fixed routes, decided by code.** A writer that crashes, runs out of steps or stops half way is replaced by a backup model, then another, then the original one-call pipeline for that desk only. If the thing deciding what to do after a failure were itself a model, its own failure would go unnoticed.
 - **It always finishes inside Catalyst's 15-minute job limit.** Writers get 5 minutes, backups 2.5 each, model retries stop when time is up, and time is always kept back for the fallback, publishing and the alert.
 - **Nothing counts as published until it's read back.** After saving the report, the job reads it from Stratus and compares the links.
@@ -70,12 +77,13 @@ Every rule below is enforced in code, not by asking the model nicely.
 
 ## 5. How it was tested
 
-- **57 offline checks** (`python tests/test_agent.py`, with fake models and fake sources, run on every push). They cover:
+- **62 offline checks** (`python tests/test_agent.py`, with fake models and fake sources, run on every push). They cover:
   - a desk calling `finish` early, crashing, or stopping half done
   - every agent writer failing
   - the checker going down or returning broken JSON (this never costs the writer a draft)
   - weak grounding, invented IDs and background links
-  - desks staying inside their contract
+  - desks staying inside their contract, and a failed page read not counting as read
+  - feed parsing (RSS and Atom) and duplicate detection
   - the time budget
   - the alert rules
   - the **Catalyst Job function end to end**, with a fake SDK and an in-memory bucket: clean run, degraded run, and crash
@@ -95,7 +103,7 @@ Every rule below is enforced in code, not by asking the model nicely.
 
 | Version | What changed | Why |
 |---|---|---|
-| v1 (Sep 2026) | One-call pipeline on Catalyst: fetch, one Gemini call, email at 10:00. Ran daily. | It worked, but it wrote from headlines, repeated stories (5 repeats in 3 days despite a no-repeat rule), and nothing noticed a wrong answer. |
+| v1 (Sep 2026, separate repo) | One-call pipeline on Catalyst: fetch, one Gemini call, email at 10:00. Ran daily. This repo starts at v2. | It worked, but it wrote from headlines, repeated stories (5 repeats in 3 days despite a no-repeat rule), and nothing noticed a wrong answer. |
 | v2 | One agent with tools, plus a checker model. | Give the model choices (what to read) and an independent check. |
 | v3 | Two desk agents, a harness with contracts and fallbacks, a report card. | Specialised, parallel work, and code (not the model) decides when it's done. |
 | v4 | Spec file, Edgepedia background, per-call timing. | Make it configurable, grounded and observable. |
@@ -125,24 +133,33 @@ Fixes found by reading real run logs, each covered by a test:
 | **Keep the original pipeline as the last fallback** | A simple, proven path means a bad day still produces a brief. |
 | **Gemini model chains** (Flash Lite writes; Flash and 3 Flash Preview back up and check) | Cheap for the bulk of the work, with different models for independence and for outages or quota limits. |
 | **Edgepedia for background** | A free, citable source, so background facts can be checked rather than generated. |
-| **A simple website: reports only** | A reader should understand it in seconds. An earlier version had an on-device chat (WebLLM) and a monitoring panel; with only a few dozen stories they added confusion, not value, so they were removed. Test runs are never shown. |
+| **A simple website** | A reader should understand it in seconds: reports first, details folded away, test runs never shown. A monitoring panel was removed as noise; the numbers stay in each run's trace. |
+| **Chat behind one button, model optional** | Questions are answered from the reports by retrieval straight away. The on-device model is a ~1 GB download, so it loads only when the visitor asks for it, and nothing they type leaves the page. |
 
-## 9. Skills this project demonstrates
+## 9. Known limits
 
-- **Building AI agents and conversational flows:** function-calling agents with tools, contracts and edge-case handlers (early finish, crashes, half-done work, outages).
-- **Prompt engineering and context management:** system prompts built from a spec, scoped checker prompts, a rubric with evidence, lessons carried between runs, and retrieval of article text and Edgepedia background before writing.
+- **One model provider.** Writers and checker are different Gemini models, so they're independent of each other's mistakes but not of a Gemini-wide outage. If every desk model fails, the original pipeline still writes the brief, on Gemini too. A second provider is the next step.
+- **The checker sees excerpts, not whole articles,** to keep each review fast and cheap.
+- **Some feeds go through a relay.** When a site blocks direct feed requests, the fetcher retries through the public rss2json service.
+- **Short history.** The agent version went live on 26 Nov 2026; the earlier days on the site come from v1 and show headlines only.
+- **Catalyst Development environment.** The job and bucket run in Catalyst's Development environment, which is enough for one scheduled job a day.
+
+## 10. Skills this project demonstrates
+
+- **Building AI agents and conversational flows:** function-calling agents with tools, contracts and edge-case handlers (early finish, crashes, half-done work, outages), and a chat that answers only from its sources.
+- **Prompt engineering and context management:** system prompts built from a spec, scoped checker prompts, a rubric with evidence, lessons carried between runs, retrieval of article text and Edgepedia background before writing, and retrieval (BM25) for the chat.
 - **End-to-end delivery:** spec, then prompts and tools, then offline tests, then staging runs with fault injection, then production on Zoho Catalyst, then alerts and a watchdog.
 - **Integrations:** Gemini, Product Hunt GraphQL, the Hacker News API, five RSS feeds with self-healing fallbacks, the Edgepedia API, Resend, Zoho Catalyst (Job Scheduling, Stratus) and GitHub Pages.
 - **Optimisation from logs:** every fix in section 7 came from reading run traces and report cards; latency and failure rates are recorded per model call.
 - **Clear writing for users:** every story gets one plain line on why it matters, and the website is a single page anyone can read.
 
-## 10. Run it yourself
+## 11. Run it yourself
 
 ```
 pip install -r requirements.txt
-python tests/test_agent.py               # 57 offline checks
+python tests/test_agent.py               # 62 offline checks
 copy .env.example .env                   # GEMINI_API_KEY, PRODUCT_HUNT_DEVELOPER_TOKEN
-python run.py --dry-run                  # a real run; report saved to site/data
+python run.py --test-run                 # a real run (uses API quota); report saved to runs/
 ```
 
 **Deploy to Zoho Catalyst:**
@@ -170,7 +187,7 @@ Environment variables:
 - **For alert emails:** `RESEND_API_KEY`, `ALERT_TO_EMAIL`, `ALERT_FROM_EMAIL`
 - **Optional model chains:** `DESK_MODEL`, `RESERVE_MODELS`, `EVALUATOR_MODELS`
 
-## 11. Files
+## 12. Files
 
 | File | What |
 |---|---|
@@ -186,5 +203,5 @@ Environment variables:
 | `functions/jarvis_agent/main.py` | The Zoho Catalyst Job function entry point |
 | `run.py` | One run: harness → publish and read back → memory → alert |
 | `scripts/build_catalyst.py` | Builds the Catalyst function folder |
-| `site/index.html` | The website |
-| `tests/test_agent.py` | The 57 offline checks |
+| `site/index.html` | The website and the Ask Jarvis chat |
+| `tests/test_agent.py` | The 62 offline checks |

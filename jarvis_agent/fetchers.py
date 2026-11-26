@@ -137,8 +137,7 @@ def fetch_hacker_news(last_run_utc):
 
 def parse_xml_feed(xml_text):
     """
-    Standard XML parser for RSS and Atom feeds using built-in xml.etree.ElementTree.
-    100% pure standard library - zero external dependencies!
+    Parse an RSS or Atom feed with the standard library (xml.etree).
     """
     entries = []
     root = ET.fromstring(xml_text)

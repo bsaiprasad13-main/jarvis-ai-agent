@@ -3,13 +3,11 @@ import os
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_DIR = os.path.join(ROOT, "data")
-RUNS_DIR = os.path.join(ROOT, "runs")
-SITE_DATA_DIR = os.path.join(ROOT, "site", "data")
 
 try:
     from dotenv import load_dotenv
     # Keys come from .env in this folder, or from the file JARVIS_ENV_FILE points to
-    # (e.g. the production News Reporter's .env), so keys never need copying.
+    # (e.g. a shared .env elsewhere), so keys never need copying.
     _env = os.path.join(ROOT, ".env")
     load_dotenv(_env if os.path.exists(_env) else os.environ.get("JARVIS_ENV_FILE", _env))
 except ImportError:

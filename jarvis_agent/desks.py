@@ -17,7 +17,6 @@ with open(os.path.join(ROOT, "jarvis.config.json"), encoding="utf-8") as _f:
 
 READER = SPEC["reader"]
 TEST_QUESTION = SPEC["test_question"]
-BRIEF_TITLE = SPEC["brief_title"]
 SECTION_TITLES = {k: v["title"] for k, v in SPEC["sections"].items()}
 SECTION_BRIEFS = {k: v["brief"] for k, v in SPEC["sections"].items()}
 
@@ -29,7 +28,7 @@ class Desk:
     prefix: str         # item ids look like g12 / i7
     sources: tuple
     sections: tuple
-    min_read: int       # picks that must be read in full (or tried) before a draft can pass
+    min_read: int       # picks that must be read in full (page fetched, with text) before a draft can pass
     max_items: int = 8
     min_items: int = 3  # aim; fewer is allowed only with an honest "quiet" note
 

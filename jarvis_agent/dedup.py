@@ -23,11 +23,11 @@ class Deduplicator:
 
     def add_item_if_not_duplicate(self, item):
         """Keep the item unless its link or its title matches one already kept this run."""
-        text = item.get("text_to_embed") or item.get("title", "")
+        text = item.get("title", "")
         for kept in self.items:
             if item.get("url") and item.get("url") == kept.get("url"):
                 return False
-            if similarity(text, kept.get("text_to_embed") or kept.get("title", "")) > THRESHOLD:
+            if similarity(text, kept.get("title", "")) > THRESHOLD:
                 return False
         self.items.append(item)
         return True
