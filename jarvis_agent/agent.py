@@ -178,7 +178,9 @@ def build_trace(state, mode, fallback_reason=None):
                     "rule_errors": d["review"]["rule_errors"], "issues": d["review"]["issues"],
                     "picks": [{"section": k, "item_id": e.get("item_id"), "title": e.get("title"),
                                "why_it_matters": e.get("why_it_matters"),
-                               "read": bool(state.items.get(str(e.get("item_id")), {}).get("article"))}
+                               "read": str(e.get("item_id")) in d.get("read_ids", []),
+                               "link": state.items.get(str(e.get("item_id")), {}).get("url"),
+                               "source": state.items.get(str(e.get("item_id")), {}).get("source")}
                               for k in DIGEST_KEYS for e in (d["digest"].get(k) or [])]}
                    for d in state.drafts],
         "read_titles": {i: state.items[i]["title"] for i in state.reads if i in state.items},

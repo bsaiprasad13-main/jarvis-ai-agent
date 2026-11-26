@@ -167,7 +167,8 @@ def submit_digest(state, tools=None, ai_news=None, india_news=None, notes=None):
     if len(state.drafts) >= MAX_DRAFTS:
         return {"error": "draft limit reached. Call finish."}
     review = state.critic(state, digest)
-    state.drafts.append({"digest": digest, "review": review})
+    state.drafts.append({"digest": digest, "review": review,
+                         "read_ids": [i for i in state.reads if state.items.get(i, {}).get("article")]})
     accepted = review["accepted"]
     if not accepted and len(state.drafts) >= MAX_DRAFTS and not review["rule_errors"]:
         accepted = True                  # last allowed draft: take it if it breaks no rules
@@ -210,7 +211,8 @@ def dispatch(state, name, args):
             result = fn(state, **(args or {}))
         except TypeError as e:
             result = {"error": f"bad arguments: {e}"}
-    state.events.append({"tool": name, "args": _short(args), "result": _short(result)})
+    state.events.append({"step": getattr(state, "steps", None), "tool": name,
+                         "args": _short(args), "result": _short(result)})
     return result
 
 
