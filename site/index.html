@@ -1,0 +1,286 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Jarvis AI Agent</title>
+<meta name="description" content="A multi-agent news system with an independent evaluator and a code-checked harness. Every daily run, with its evidence.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;600;700&display=swap">
+<style>
+/* Layout: one reading column. A run picker at the top, then digest, desks, evaluator and report card for the chosen run. */
+:root {
+  --paper: #f5f6f9; --surface: #ffffff; --ink: #151821; --muted: #5a6273; --line: #dde1e9;
+  --agent: #2b54d6; --agent-soft: #e7ecfb; --edit: #c0244a; --edit-soft: #fbe9ee; --pass: #12775a; --pass-soft: #e2f3ec;
+  --warn: #9a5b00; --warn-soft: #fbf0dc;
+  --display: "Space Grotesk", "Segoe UI", system-ui, sans-serif;
+  --body: "Inter", "Segoe UI", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) { :root {
+  --paper: #0f1218; --surface: #171b24; --ink: #e8ebf1; --muted: #9aa3b4; --line: #2a303c;
+  --agent: #8aa4ff; --agent-soft: #1d2540; --edit: #ff7393; --edit-soft: #3a1a24; --pass: #52cfa0; --pass-soft: #12302a;
+  --warn: #f0b45a; --warn-soft: #33270f; color-scheme: dark } }
+
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--paper); color: var(--ink); font: 400 15px/1.6 var(--body); }
+.wrap { max-width: 1000px; margin: 0 auto; padding-block: 40px 64px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+h1, h2, h3, h4 { font-family: var(--display); text-wrap: balance; margin: 0; line-height: 1.2; }
+h1 { font-size: clamp(30px, 5vw, 44px); font-weight: 700; letter-spacing: -0.01em; }
+h2 { font-size: 22px; font-weight: 600; }
+h3 { font-size: 16px; font-weight: 600; }
+h4 { font-size: 14px; font-weight: 600; }
+p { margin: 0; }
+a { color: var(--agent); }
+a:focus-visible, button:focus-visible { outline: 2px solid var(--agent); outline-offset: 2px; border-radius: 4px; }
+code { font-family: var(--mono); font-size: 0.9em; }
+.eyebrow { font: 500 12px/1 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.lead { font-size: 17px; color: var(--muted); max-width: 68ch; }
+.muted { color: var(--muted); }
+section { display: grid; gap: 16px; margin-top: 52px; }
+.section-head { display: grid; gap: 6px; }
+.section-head p { color: var(--muted); max-width: 68ch; }
+header { display: grid; gap: 14px; }
+.links { display: flex; gap: 16px; flex-wrap: wrap; font-size: 14px; }
+
+/* how it works */
+.flow { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+@media (max-width: 760px) { .flow { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.node { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px; display: grid; gap: 4px; align-content: start; min-width: 0; }
+.node b { font-family: var(--display); font-weight: 600; }
+.node span { font-size: 13.5px; color: var(--muted); }
+.node.code { border-style: dashed; }
+
+/* run picker */
+.runs { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; }
+.run-btn { flex: 0 0 auto; display: grid; gap: 2px; text-align: left; font: inherit; color: var(--ink); background: var(--surface);
+  border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; cursor: pointer; min-width: 150px; }
+.run-btn small { font: 400 12px/1.3 var(--mono); color: var(--muted); }
+.run-btn[aria-pressed="true"] { border-color: var(--agent); box-shadow: inset 0 0 0 1px var(--agent); }
+.run-btn .kind { font: 500 11px/1 var(--mono); letter-spacing: 0.05em; text-transform: uppercase; color: var(--agent); }
+.run-btn.pipeline .kind { color: var(--muted); }
+
+.meta { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { font: 500 12px/1 var(--mono); padding: 6px 9px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); background: var(--surface); }
+.chip.ok { color: var(--pass); border-color: var(--pass); }
+.chip.warn { color: var(--warn); border-color: var(--warn); }
+.chip.bad { color: var(--edit); border-color: var(--edit); }
+
+/* digest */
+.digest { display: grid; gap: 24px; }
+.dsec { display: grid; gap: 10px; }
+.dsec h3 { font: 500 13px/1.2 var(--mono); letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); }
+.items { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+@media (max-width: 760px) { .items { grid-template-columns: minmax(0, 1fr); } }
+.item { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0; }
+.item a.t { font-weight: 600; color: var(--ink); text-decoration: none; overflow-wrap: anywhere; }
+.item a.t:hover { text-decoration: underline; }
+.src { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font: 400 12px/1 var(--mono); color: var(--muted); }
+.badge { font: 500 11px/1 var(--mono); padding: 4px 7px; border-radius: 4px; background: var(--pass-soft); color: var(--pass); }
+.badge.retry { background: var(--warn-soft); color: var(--warn); }
+.badge.fail { background: var(--edit-soft); color: var(--edit); }
+.item p { font-size: 14px; color: var(--muted); }
+.note { font-size: 14px; color: var(--muted); background: var(--surface); border: 1px dashed var(--line); border-radius: 10px; padding: 12px 14px; }
+
+/* desks */
+.desks { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-items: start; }
+@media (max-width: 860px) { .desks { grid-template-columns: minmax(0, 1fr); } }
+.desk { display: grid; gap: 12px; min-width: 0; }
+.desk-head { display: grid; gap: 4px; }
+.attempt { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px; display: grid; gap: 12px; min-width: 0; }
+.attempt.failed { border-color: var(--edit); border-style: dashed; }
+.attempt-head { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; align-items: baseline; }
+.facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1px; background: var(--line); border-radius: 8px; overflow: hidden; }
+.fact { background: var(--surface); padding: 8px 10px; display: grid; gap: 1px; }
+.fact b { font: 600 18px/1.1 var(--display); font-variant-numeric: tabular-nums; }
+.fact span { font-size: 12px; color: var(--muted); }
+.err { font: 400 12.5px/1.5 var(--mono); color: var(--edit); overflow-wrap: anywhere; }
+details { border-top: 1px solid var(--line); padding-top: 10px; }
+summary { cursor: pointer; font-weight: 500; font-size: 14px; }
+.list { margin: 8px 0 0; padding-left: 18px; font-size: 13.5px; color: var(--muted); display: grid; gap: 3px; }
+.draft { display: grid; gap: 8px; padding-top: 10px; border-top: 1px solid var(--line); }
+.draft-head { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; align-items: baseline; }
+.score { font: 600 14px/1 var(--mono); padding: 5px 9px; border-radius: 6px; }
+.score.no { background: var(--edit-soft); color: var(--edit); }
+.score.yes { background: var(--pass-soft); color: var(--pass); }
+.rubric { display: grid; gap: 4px; }
+.dim { display: grid; grid-template-columns: 78px minmax(0, 1fr) 22px; gap: 8px; align-items: center; font-size: 12.5px; }
+.dim .bar { height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; }
+.dim .bar i { display: block; height: 100%; background: var(--agent); }
+.dim .bar i.low { background: var(--edit); }
+.dim span:last-child { font-family: var(--mono); text-align: right; font-variant-numeric: tabular-nums; }
+.mark { border-left: 3px solid var(--edit); padding-left: 10px; font-size: 13.5px; display: grid; gap: 2px; }
+.mark .fix { color: var(--muted); }
+.lesson { background: var(--agent-soft); border-radius: 8px; padding: 10px 12px; font-size: 13.5px; }
+
+/* report card */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; min-width: 560px; font-size: 14px; }
+th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+tr:last-child td { border-bottom: 0; }
+th { font: 500 12px/1.2 var(--mono); letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); }
+td.ev { color: var(--muted); font-size: 13px; overflow-wrap: anywhere; }
+footer { margin-top: 56px; padding-top: 18px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13px; display: grid; gap: 4px; }
+@media (prefers-reduced-motion: no-preference) { .run-btn { transition: border-color .15s; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Jarvis · multi-agent news system</div>
+    <h1>Jarvis AI Agent</h1>
+    <p class="lead">Every morning two AI desks read the day's AI and startup news and write a digest for someone breaking into product management. An evaluator on a different model reviews every draft, and a harness written in plain code decides when the work is actually done. This site shows each run with its evidence: what the agents did, what the evaluator rejected, and every check the harness ran.</p>
+    <div class="links"><a href="https://github.com/bsaiprasad13-main/jarvis-ai-agent">Source code on GitHub</a></div>
+  </header>
+
+  <section>
+    <div class="section-head">
+      <div class="eyebrow">How it works</div>
+      <h2>Agents do the judgment, code does the checking</h2>
+      <p>Dashed boxes are plain code. Solid boxes are models.</p>
+    </div>
+    <div class="flow">
+      <div class="node"><b>Two desk agents</b><span>Global: Product Hunt, Hacker News, TechCrunch, VentureBeat. India: YourStory, Inc42, Business Standard. Each decides what to fetch, which articles to read and when its draft is ready.</span></div>
+      <div class="node"><b>Evaluator</b><span>A different model, so nothing grades its own work. Scores each draft 1 to 5 on grounded, specific, relevant, selection and honest, with evidence and exact fixes.</span></div>
+      <div class="node code"><b>Done-check</b><span>A desk can't finish until its contract is met. Crashed or half-done work goes to a reserve model, then to the old pipeline.</span></div>
+      <div class="node code"><b>Final checks</b><span>Every link was fetched today, nothing repeats, every section is filled or explained, and the email and this site's data were written and read back.</span></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <div class="eyebrow">Runs</div>
+      <h2>Pick a run</h2>
+    </div>
+    <div class="runs" id="runs" role="group" aria-label="Runs"><p class="muted">Loading runs…</p></div>
+  </section>
+
+  <div id="run"></div>
+
+  <footer>
+    <p>Built with Python, Gemini function calling and GitHub Actions. Runs every morning; this page reads the saved run files directly.</p>
+  </footer>
+</div>
+
+<script>
+(function () {
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+  const SECTIONS = [["section_1_tools", "AI tools for PMs"], ["section_2_ai_news", "AI industry news"], ["section_3_india_news", "India startup & company news"]];
+  const DIMS = ["grounded", "specific", "relevant", "selection", "honest"];
+  let index = [];
+
+  function when(id) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})(?:_(\d{2})(\d{2}))?/.exec(id);
+    if (!m) return id;
+    const d = new Date(+m[1], +m[2] - 1, +m[3]);
+    const day = d.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric" });
+    return m[4] ? `${day}, ${m[4]}:${m[5]}` : day;
+  }
+
+  function renderPicker(active) {
+    $("runs").innerHTML = index.slice().reverse().map((r) => {
+      const info = r.kind === "pipeline" ? "one model call, no review" :
+        `${r.stories} stories · ${r.checks_passed}/${r.checks} checks${r.recoveries ? ` · ${r.recoveries} recovered` : ""}`;
+      return `<button class="run-btn ${r.kind}" data-id="${esc(r.id)}" aria-pressed="${r.id === active}">
+        <span class="kind">${r.kind === "pipeline" ? "Before: pipeline" : "Agent · " + esc(r.mode)}</span>
+        <span>${esc(when(r.id))}</span><small>${esc(info)}</small></button>`;
+    }).join("");
+    $("runs").querySelectorAll("button").forEach((b) => b.addEventListener("click", () => { location.hash = "r-" + b.dataset.id; }));
+  }
+
+  function digestHtml(email) {
+    const notes = email.section_notes || {};
+    return `<div class="digest">${SECTIONS.map(([key, title], n) => {
+      const rows = email[key] || [];
+      const msg = notes[`section_${n + 1}_message`];
+      return `<div class="dsec"><h3>${title}</h3>${rows.length ? `<div class="items">${rows.map((p) => `<article class="item">
+        <a class="t" href="${esc(p.link || "#")}" target="_blank" rel="noopener">${esc(p.title)}</a>
+        <div class="src">${esc(p.source || "")}${p.read ? '<span class="badge">read in full</span>' : ""}</div>
+        <p>${esc(p.why_it_matters)}</p></article>`).join("")}</div>` : ""}${msg ? `<p class="note">${esc(msg)}</p>` : (!rows.length ? '<p class="note">Nothing in this section.</p>' : "")}</div>`;
+    }).join("")}</div>`;
+  }
+
+  function attemptHtml(a) {
+    const ok = a.met_contract;
+    const sources = Object.entries(a.sources || {}).map(([n, s]) => `${esc(n)}: ${s.ok ? s.count + " new" : "failed"}`);
+    const drafts = (a.drafts || []).map((d, i) => `<div class="draft">
+      <div class="draft-head"><h4>Draft ${i + 1} · ${d.accepted ? "accepted" : "rejected"}</h4><span class="score ${d.accepted ? "yes" : "no"}">${d.score}/10</span></div>
+      <p class="muted" style="font-size:12.5px">Evaluator: <code>${esc(d.evaluator_model || "unavailable")}</code>${d.independent ? " · different model from the writer" : " · <b>same model as the writer</b>"} · ${(d.picks || []).filter((p) => p.read).length}/${(d.picks || []).length} picks read in full</p>
+      <div class="rubric">${DIMS.map((k) => { const s = (d.rubric?.[k]?.score) || 0; return `<div class="dim" title="${esc(d.rubric?.[k]?.evidence || "")}"><span>${k}</span><span class="bar"><i class="${s < 3 ? "low" : ""}" style="width:${s * 20}%"></i></span><span>${s}</span></div>`; }).join("")}</div>
+      ${(d.rule_errors || []).map((e) => `<div class="mark"><span><b>Rule:</b> ${esc(e)}</span></div>`).join("")}
+      ${(d.issues || []).slice(0, 3).map((x) => `<div class="mark"><span>${x.item_id ? `<code>${esc(x.item_id)}</code> ` : ""}${esc(x.problem)}</span>${x.fix ? `<span class="fix">Fix: ${esc(x.fix)}</span>` : ""}</div>`).join("")}
+    </div>`).join("");
+    const reads = Object.values(a.read || {});
+    return `<div class="attempt ${ok ? "" : "failed"}">
+      <div class="attempt-head"><h3>${a.role === "reserve" ? "Reserve" : "Writer"} · <code>${esc(a.model)}</code></h3>
+        <span class="badge ${ok ? "" : "fail"}">${ok ? "met its contract" : "did not meet its contract"}</span></div>
+      ${a.error ? `<p class="err">${esc(a.error.split("\n")[0].slice(0, 160))}</p>` : ""}
+      ${!ok && a.missing?.length ? `<ul class="list">${a.missing.slice(0, 4).map((m) => `<li>${esc(m.split("\n")[0].slice(0, 160))}</li>`).join("")}</ul>` : ""}
+      <div class="facts">
+        <div class="fact"><b>${a.stories_considered ?? 0}</b><span>stories considered</span></div>
+        <div class="fact"><b>${reads.length}</b><span>articles read</span></div>
+        <div class="fact"><b>${a.steps ?? 0}</b><span>steps · ${a.seconds ?? 0}s</span></div>
+      </div>
+      ${a.finish_refusals ? `<p class="muted" style="font-size:13.5px">Tried to finish early ${a.finish_refusals}× and was refused by the done-check.</p>` : ""}
+      ${sources.length ? `<details><summary>Sources and articles read</summary><ul class="list">${sources.map((s) => `<li>${s}</li>`).join("")}</ul>${reads.length ? `<ul class="list">${reads.map((t) => `<li>Read: ${esc(t)}</li>`).join("")}</ul>` : ""}</details>` : ""}
+      ${drafts}
+      ${(a.lessons || []).map((l) => `<p class="lesson"><b>Lesson saved for tomorrow:</b> ${esc(l)}</p>`).join("")}
+    </div>`;
+  }
+
+  function reportHtml(card) {
+    return `<div class="table-wrap"><table><thead><tr><th>Result</th><th>Check</th><th>Evidence</th></tr></thead><tbody>${card.map((c) => {
+      const tag = c.passed ? ["PASS", ""] : (c.final === false ? ["RETRIED", "retry"] : ["FAIL", "fail"]);
+      return `<tr><td><span class="badge ${tag[1]}">${tag[0]}</span></td><td>${esc(c.check)}</td><td class="ev">${esc(String(c.evidence).split("\n")[0].slice(0, 200))}</td></tr>`;
+    }).join("")}</tbody></table></div>`;
+  }
+
+  async function show(id) {
+    const entry = index.find((r) => r.id === id) || index[index.length - 1];
+    if (!entry) return;
+    renderPicker(entry.id);
+    $("run").innerHTML = '<section><p class="muted">Loading run…</p></section>';
+    let rec;
+    try { rec = await (await fetch(entry.file)).json(); }
+    catch (e) { $("run").innerHTML = '<section><p class="note">This run file could not be loaded. Try another run.</p></section>'; return; }
+    if (rec.kind === "pipeline") {
+      $("run").innerHTML = `<section><div class="section-head"><div class="eyebrow">Before · ${esc(when(rec.id))}</div>
+        <h2>The old pipeline's email</h2><p>${esc(rec.note || "One model call over the headlines, no reading, no review. Shown for comparison.")}</p></div>${digestHtml(rec.email)}</section>`;
+      return;
+    }
+    const t = rec.trace, finals = t.report_card.filter((c) => c.final !== false);
+    const passed = finals.filter((c) => c.passed).length, retried = t.report_card.filter((c) => c.final === false && !c.passed).length;
+    const stories = SECTIONS.reduce((n, [k]) => n + (rec.email[k] || []).length, 0);
+    $("run").innerHTML = `
+      <section><div class="section-head"><div class="eyebrow">Run · ${esc(when(rec.id))}</div><h2>The digest</h2></div>
+        <div class="meta"><span class="chip">${esc(rec.mode)}</span><span class="chip">${stories} stories</span>
+          <span class="chip ${passed === finals.length ? "ok" : "bad"}">${passed}/${finals.length} final checks passed</span>
+          ${retried ? `<span class="chip warn">${retried} failure${retried > 1 ? "s" : ""} recovered</span>` : ""}<span class="chip">${t.seconds}s</span></div>
+        ${digestHtml(rec.email)}</section>
+      <section><div class="section-head"><div class="eyebrow">Agents</div><h2>How each desk worked</h2>
+        <p>Each box is one attempt. A failed attempt is handed to the next model. Hover a rubric bar for the evaluator's evidence.</p></div>
+        <div class="desks">${t.desks.map((d) => `<div class="desk"><div class="desk-head"><h3>${esc(d.title)}</h3>
+          <p class="muted" style="font-size:14px">Delivered by the ${d.written_by === "pipeline" ? "old pipeline (all agent writers failed)" : esc(d.written_by)}.</p></div>
+          ${d.attempts.map(attemptHtml).join("")}</div>`).join("")}</div></section>
+      <section><div class="section-head"><div class="eyebrow">Harness</div><h2>Report card</h2>
+        <p>Every check the harness ran in code. RETRIED means an attempt failed and the harness recovered by handing the work to the next model.</p></div>
+        ${reportHtml(t.report_card)}</section>`;
+  }
+
+  async function boot() {
+    try { index = await (await fetch("data/index.json")).json(); }
+    catch (e) { $("runs").innerHTML = '<p class="note">No runs published yet.</p>'; return; }
+    const route = () => show(location.hash.startsWith("#r-") ? location.hash.slice(3) : (index.filter((r) => r.kind !== "pipeline").pop() || {}).id);
+    window.addEventListener("hashchange", route);
+    route();
+  }
+  boot();
+})();
+</script>
+</body>
+</html>

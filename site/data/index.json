@@ -1,0 +1,21 @@
+[
+ {
+  "id": "2026-11-26_1828",
+  "kind": "agent",
+  "mode": "dry run",
+  "file": "data/2026-11-26_1828.json",
+  "stories": 11,
+  "checks_passed": 9,
+  "checks": 9
+ },
+ {
+  "id": "2026-11-26_1831",
+  "kind": "agent",
+  "mode": "dry run",
+  "file": "data/2026-11-26_1831.json",
+  "stories": 15,
+  "checks_passed": 9,
+  "checks": 9,
+  "recoveries": 2
+ }
+]

@@ -2,6 +2,7 @@
 
     python run.py --dry-run                 # everything, but save the email to runs/ instead of sending; memory unchanged
     python run.py --dry-run --save-memory   # same, but remember sent stories and lessons (for back-to-back test runs)
+    python run.py --no-email                # daily website run: everything except the email; memory updated
     python run.py                           # live: send the email, update memory and the website data
 """
 import datetime
@@ -49,12 +50,12 @@ def publish_site_data(stamp, email, trace, mode):
     return links
 
 
-def main(dry_run, save_memory):
+def main(dry_run, save_memory, no_email=False):
     os.makedirs(RUNS_DIR, exist_ok=True)
     stamp = datetime.datetime.now().strftime("%Y-%m-%d_%H%M")
     memory = Memory()
     memory.prune_sent()
-    mode = "dry run" if dry_run else "live"
+    mode = "dry run" if dry_run else ("daily" if no_email else "live")
     print(f"=== Jarvis run {stamp} ({mode}) ===")
 
     email, urls, trace, report = harness.run(memory)
@@ -67,7 +68,7 @@ def main(dry_run, save_memory):
         with open(path, "w", encoding="utf-8") as f:
             f.write(html_out)
         report.add("Email saved (dry run, not sent)", os.path.getsize(path) > 0, path)
-    else:
+    elif not no_email:
         report.add("Email sent", send_daily_digest(email, trace), "Resend accepted the message")
 
     published = publish_site_data(stamp, email, trace, mode)
@@ -105,10 +106,10 @@ def main(dry_run, save_memory):
 if __name__ == "__main__":
     dry = "--dry-run" in sys.argv
     try:
-        main(dry, "--save-memory" in sys.argv)
+        main(dry, "--save-memory" in sys.argv, "--no-email" in sys.argv)
     except Exception:
         err = traceback.format_exc()
         print("!!! RUN FAILED !!!\n" + err)
-        if not dry:
+        if not dry and "--no-email" not in sys.argv:
             send_alert_email(err)
         sys.exit(1)
