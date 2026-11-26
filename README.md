@@ -36,7 +36,7 @@ It grew out of Jarvis AI News Reporter, a fixed pipeline that has emailed me eve
 1. **Gather.** The agent fetches sources. Code removes stories already sent in the last 14 days and near-duplicates.
 2. **Investigate.** For stories whose value isn't clear from the title, it reads the full article (up to 12 per run). If a source is down, it can search Hacker News to fill the gap.
 3. **Draft and review.** It submits a draft. The editor is two layers:
-   - **Rules in code**, which the model can't talk its way around: every story must be one it actually fetched, nothing repeats, items sit in the right section, explanations aren't one-liners, empty sections say why.
+   - **Rules in code**, which the model can't talk its way around: every story must be one it actually fetched, at least 4 picks must be read in full, nothing repeats, items sit in the right section, explanations aren't one-liners, empty sections say why.
    - **Gemini as a strict editor**, a separate call that scores usefulness for the reader 1–10 and lists concrete fixes, including better stories the draft skipped.
 4. **Fix.** A rejected draft goes back with the feedback. The agent reads more or swaps stories, then resubmits (3 drafts max).
 5. **Reflect.** It saves a short lesson ("VentureBeat failed 3 days running; search for AI news on HN instead"). Tomorrow's run starts by reading its lessons.
@@ -46,7 +46,7 @@ It grew out of Jarvis AI News Reporter, a fixed pipeline that has emailed me eve
 - **No made-up links.** The model only sees item ids like `s14`. Code maps them back to real URLs, so every link in the email was fetched that day.
 - **Web text is data.** Article text is labelled as information, and the agent has no tool that can act on it. The only outside action is the final email to one fixed address. Titles are HTML-escaped in the email.
 - **Budgets.** At most 30 model steps, 12 article reads, 4 searches and 3 drafts per run.
-- **Always delivers.** If the agent errors or runs out of steps without a usable draft, the original pipeline writes the digest.
+- **Always delivers.** If the agent's model is overloaded it switches to a backup model and carries on. If the agent errors or runs out of steps without a usable draft, the original pipeline writes the digest.
 - **Visible trace.** Each email ends with how it was made: sources checked, stories considered, articles read, each draft's score. The full step-by-step log is saved in `runs/`.
 
 ## Run it
@@ -56,7 +56,7 @@ pip install -r requirements.txt
 copy .env.example .env        # then fill in your keys
 python run.py --dry-run       # full run, email saved to runs/ instead of sent
 python run.py                 # live: sends the email and updates memory
-python tests/test_agent.py    # 23 offline checks, no keys or internet needed
+python tests/test_agent.py    # 26 offline checks, no keys or internet needed
 ```
 
 Keys (`.env`): `GEMINI_API_KEY`, `RESEND_API_KEY`, `PRODUCT_HUNT_DEVELOPER_TOKEN`, `TO_EMAIL`, `FROM_EMAIL`. Optional: `AGENT_MODEL` (default `gemini-3.5-flash-lite`).

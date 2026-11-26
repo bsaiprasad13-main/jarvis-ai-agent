@@ -109,7 +109,7 @@ def generate_email_content(items, failed_sources):
     prompt = construct_prompt(items, failed_sources)
     
     # Direct official Google Gemini REST API call (100% reliable, zero SDK dependency issues)
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key={api_key}"
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent"
     payload = {
         "contents": [
             {
@@ -124,7 +124,7 @@ def generate_email_content(items, failed_sources):
     }
     
     try:
-        response = requests.post(url, json=payload, timeout=60)
+        response = requests.post(url, headers={"x-goog-api-key": api_key}, json=payload, timeout=60)
         if response.status_code == 200:
             res_json = response.json()
             raw_text = res_json['candidates'][0]['content']['parts'][0]['text']
@@ -139,5 +139,5 @@ def generate_email_content(items, failed_sources):
             print(f"Gemini API Error ({response.status_code}): {response.text}")
             return None
     except Exception as e:
-        print(f"Error calling Gemini REST API: {e}")
+        print(f"Error calling Gemini REST API: {type(e).__name__}")
         return None

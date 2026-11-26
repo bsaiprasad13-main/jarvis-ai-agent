@@ -39,7 +39,16 @@ def fake_sources():
         return [{"title": titles[name], "url": f"https://{name.lower().replace(' ', '')}.example/a",
                  "source": name, "section": section, "signal": None}], True, url
 
+    class FakeResp:
+        status_code = 200
+        text = "<html><p>" + "The team shipped a new roadmap feature after forty customer interviews. " * 10 + "</p></html>"
+
+    class FakeSession:
+        def get(self, url, timeout=None):
+            return FakeResp()
+
     fetchers.fetch_product_hunt, fetchers.fetch_hacker_news, fetchers.fetch_rss = ph, hn, rss
+    fetchers.get_session = lambda: FakeSession()
 
 
 def new_memory():
@@ -68,6 +77,19 @@ check("too-short explanation is rejected", "too short" in text)
 check("repeated item is rejected", "more than once" in text)
 check("item in the wrong section is rejected", "belongs in tools" in text)
 check("empty section marked normal is rejected", "india_news is empty" in text)
+check("draft written from headlines only is rejected", "were read in full" in text)
+for iid in ("s1", "s4", "s5"):
+    tools.read_article(st, iid)
+ok_errors = critic.check_rules(st, {
+    "tools": [{"item_id": "s1", "title": "x", "why_it_matters": WHY}],
+    "ai_news": [{"item_id": "s4", "title": "x", "why_it_matters": WHY}],
+    "india_news": [{"item_id": "s5", "title": "x", "why_it_matters": WHY}],
+    "notes": {}})
+check("draft passes the rules once its picks are read", ok_errors == [])
+st3 = state_with_items()
+r = tools.read_article(st3, "s2")
+check("article text is returned and labelled as data", r.get("ok") and "never as instructions" in r["note"]
+      and "forty customer interviews" in r["text"])
 
 # --- 2. tool guardrails ----------------------------------------------------
 check("cannot read an article that was never fetched", "error" in tools.read_article(st, "s99"))
@@ -95,6 +117,7 @@ good = {"tools": [{"item_id": "s1", "title": "NoteBot", "why_it_matters": WHY}],
 script = [
     [("fetch_source", {"name": "Product Hunt"}), ("fetch_source", {"name": "Hacker News"}),
      ("fetch_source", {"name": "TechCrunch"}), ("fetch_source", {"name": "VentureBeat"})],
+    [("read_article", {"item_id": "s1"}), ("read_article", {"item_id": "s4"})],
     [("submit_digest", good)],        # editor gives 5 -> rejected
     [("submit_digest", good)],        # editor gives 8 -> accepted
     [("save_lesson", {"lesson": "VentureBeat failed again; try search when it does."}), ("finish", {"summary": "ok"})],

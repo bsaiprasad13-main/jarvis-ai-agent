@@ -20,9 +20,10 @@ def _post(model, payload, tries=5):
     wait = 8
     for attempt in range(tries):
         try:
-            resp = requests.post(url, params={"key": key}, json=payload, timeout=90)
+            # key in a header, never in the URL, so it can't appear in error messages
+            resp = requests.post(url, headers={"x-goog-api-key": key}, json=payload, timeout=90)
         except requests.RequestException as e:
-            last = f"network error: {e}"
+            last = f"network error: {type(e).__name__}"
         else:
             if resp.status_code == 200:
                 return resp.json()

@@ -10,7 +10,7 @@ import datetime
 import time
 
 from . import critic, fetchers, gemini, legacy
-from .config import AGENT_MODEL, MAX_ARTICLE_READS, MAX_DRAFTS, MAX_SEARCHES, MAX_STEPS, PASS_SCORE
+from .config import AGENT_MODEL, BACKUP_MODEL, MAX_ARTICLE_READS, MAX_DRAFTS, MAX_SEARCHES, MAX_STEPS, PASS_SCORE
 from .tools import DECLARATIONS, DIGEST_KEYS, SOURCES, RunState, dispatch
 
 
@@ -40,7 +40,9 @@ How you work. You decide the order and what is worth your time:
    (you have {MAX_ARTICLE_READS} reads, {MAX_SEARCHES} searches). Explanations based on the real article are better.
 3. Draft: submit_digest. An independent editor scores it (needs {PASS_SCORE}/10 and no rule breaks).
 4. Improve: if rejected, fix every point of feedback and resubmit ({MAX_DRAFTS} drafts max).
-5. Reflect: save_lesson with one useful note for tomorrow, then finish.
+5. Reflect: save_lesson with one specific, actionable note for tomorrow, then finish. Good lessons name a
+   source, a kind of story, or a mistake the editor caught (e.g. "Product Hunt pages block reading; judge PH
+   tools from tagline + votes and spend reads on news"). Generic praise is not a lesson.
 
 Rules:
 - Use only item ids returned by your tools. Never invent stories, facts or numbers.
@@ -98,9 +100,18 @@ def run_agent(memory, log=print):
 
 def _loop(state, system, contents, log):
     state.steps = 0
+    state.model = AGENT_MODEL
     for step_no in range(1, MAX_STEPS + 1):
         state.steps = step_no
-        content, calls = gemini.step(AGENT_MODEL, system, contents, DECLARATIONS)
+        try:
+            content, calls = gemini.step(state.model, system, contents, DECLARATIONS)
+        except gemini.GeminiError as e:
+            if state.model == BACKUP_MODEL or not any(c in str(e) for c in ("429", "500", "503", "network")):
+                raise
+            log(f"  {state.model} unavailable; switching to {BACKUP_MODEL} and continuing")
+            state.events.append({"tool": "switch_model", "args": state.model, "result": f"now using {BACKUP_MODEL}"})
+            state.model = BACKUP_MODEL
+            content, calls = gemini.step(state.model, system, contents, DECLARATIONS)
         contents.append(content)
         if not calls:
             contents.append({"role": "user", "parts": [{"text": "Continue by calling a tool."}]})
@@ -137,7 +148,12 @@ def run_legacy(memory, state=None):
         sources = [dict(s, url=memory.source_url(s["name"], s["url"])) for s in SOURCES]
         raw, failed, _ = fetchers.fetch_all_data(sources, memory.last_run())
         items = [i for i in raw if not memory.was_sent(i["url"])]
-    data = legacy.generate_email_content(items, failed)
+    data = None
+    for attempt in range(3):                       # the model may be briefly overloaded
+        data = legacy.generate_email_content(items, failed)
+        if data:
+            break
+        time.sleep(20)
     if not data:
         raise RuntimeError("fallback pipeline also failed (Gemini returned nothing)")
     return items, data
@@ -159,8 +175,14 @@ def build_trace(state, mode, fallback_reason=None):
         "articles_read": len(state.reads),
         "searches": state.searches,
         "drafts": [{"score": d["review"]["score"], "accepted": d["review"]["accepted"] or d["digest"] is state.accepted,
-                    "rule_errors": len(d["review"]["rule_errors"]), "issues": len(d["review"]["issues"])}
+                    "rule_errors": d["review"]["rule_errors"], "issues": d["review"]["issues"],
+                    "picks": [{"section": k, "item_id": e.get("item_id"), "title": e.get("title"),
+                               "why_it_matters": e.get("why_it_matters"),
+                               "read": bool(state.items.get(str(e.get("item_id")), {}).get("article"))}
+                              for k in DIGEST_KEYS for e in (d["digest"].get(k) or [])]}
                    for d in state.drafts],
+        "read_titles": {i: state.items[i]["title"] for i in state.reads if i in state.items},
+        "model": getattr(state, "model", AGENT_MODEL),
         "lessons_saved": state.lessons,
         "summary": state.summary,
         "events": state.events,

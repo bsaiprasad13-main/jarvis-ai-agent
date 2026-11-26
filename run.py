@@ -9,6 +9,12 @@ import os
 import sys
 import traceback
 
+for _stream in (sys.stdout, sys.stderr):      # Windows consoles can't print every symbol in news titles
+    try:
+        _stream.reconfigure(encoding="utf-8", errors="replace")
+    except AttributeError:
+        pass
+
 from jarvis_agent.agent import run_with_fallback
 from jarvis_agent.config import RUNS_DIR
 from jarvis_agent.email_sender import render_email_html, send_alert_email, send_daily_digest

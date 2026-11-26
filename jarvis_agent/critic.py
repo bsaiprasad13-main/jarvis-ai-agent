@@ -14,10 +14,17 @@ from .tools import DIGEST_KEYS, SECTION_NAMES
 READER = ("a final-year engineering student moving into product management, "
           "looking for Associate PM / PM roles as a fresher")
 MIN_WORDS, MAX_WORDS, MAX_PER_SECTION = 12, 70, 8
+MIN_READ = 4          # picks that must be read in full (or tried) before a draft can pass
 
 
 def check_rules(state, digest):
     errors, seen = [], set()
+    picks = [str(e.get("item_id")) for k in DIGEST_KEYS for e in (digest.get(k) or [])]
+    read = [i for i in picks if state.items.get(i, {}).get("read_attempted")]
+    need = min(MIN_READ, len(picks))
+    if len(read) < need:
+        errors.append(f"Only {len(read)} of your picks were read in full. Use read_article on at least {need} "
+                      "picks (start with the ones whose value is least clear) and base why_it_matters on what they say.")
     for key in DIGEST_KEYS:
         entries = digest.get(key) or []
         if len(entries) > MAX_PER_SECTION:
@@ -55,6 +62,8 @@ def _draft_text(state, digest):
             read = "full article read" if item.get("article") else "title only"
             lines.append(f"- [{e.get('item_id')}] {e.get('title')} ({item.get('source', '?')}, {read})\n"
                          f"  why: {e.get('why_it_matters')}")
+            if item.get("article"):
+                lines.append(f"  article excerpt: {item['article'][:500]}")
         note = (digest.get("notes") or {}).get(key) or {}
         if note.get("status") and note["status"] != "normal":
             lines.append(f"  note: {note['status']} - {note.get('message', '')}")
@@ -76,7 +85,10 @@ def llm_review(state, digest):
     prompt = f"""You are a strict editor reviewing a daily email digest written for {READER}.
 
 Score the draft from 1 to 10 for how genuinely useful it is to this reader today.
+Be demanding: most first drafts deserve 5-7. Give 8 or more only if nearly every "why" points to something
+concrete from the story itself (a feature, a number, a decision) and says what the reader can learn or do with it.
 Judge:
+- Does each "why" match the article excerpt where one is given? Flag claims the excerpt doesn't support.
 - Is each "why" specific to this item and to breaking into product management? Generic lines like
   "this shows AI is growing" or "PMs should keep an eye on this" are weak.
 - Are the picks important and credible, or did the writer skip clearly better stories (see unused list)?

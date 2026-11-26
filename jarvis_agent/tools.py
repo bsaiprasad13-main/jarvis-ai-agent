@@ -118,6 +118,7 @@ def read_article(state, item_id):
     if len(state.reads) >= MAX_ARTICLE_READS:
         return {"error": f"read limit reached ({MAX_ARTICLE_READS}). Work with what you have."}
     state.reads.append(item_id)
+    item["read_attempted"] = True
     try:
         resp = fetchers.get_session().get(item["url"], timeout=12)
         if resp.status_code != 200:
