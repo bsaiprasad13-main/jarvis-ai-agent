@@ -458,7 +458,7 @@ footer a { color: var(--muted); }
       say(`${hits.length === 1 ? "Here's that story:" : "Here's what the reports say:"}${sourcesHtml(hits, true)}`);
       history.push({ q, a: hits.map((d) => d.title).join("; ") });
     } else {
-      const el = say("…");
+      const el = say("Writing an answer from these stories…");
       const ctx = hits.map((d, i) => `[${i + 1}] (${d.when}, ${d.source}) ${d.title}${d.why ? " — " + d.why.slice(0, 220) : ""}`).join("\n");
       let text = "", first = null;
       const t0 = performance.now();
@@ -469,7 +469,7 @@ footer a { color: var(--muted); }
           { role: "user", content: `Stories:\n${ctx}\n\nQuestion: ${q}` }] });
         for await (const part of stream) {
           const delta = part.choices?.[0]?.delta?.content || "";
-          if (delta) { if (first === null) first = performance.now(); text += delta; el.textContent = text; }
+          if (delta) { if (first === null) first = performance.now(); text += delta; }   // shown only after the check below
         }
       } catch (e) { text = ""; }
       // the check runs in code, not in the model: an answer must cite one of the stories shown, or it is replaced

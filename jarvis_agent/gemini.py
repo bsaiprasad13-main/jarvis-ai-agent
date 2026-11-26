@@ -29,10 +29,16 @@ def _post(model, payload, tries=5, deadline=None):
     url = f"{BASE}/{model}:generateContent"
     wait = 8
     for attempt in range(tries):
+        timeout = 60
+        if deadline:                                          # never wait past the run's time budget
+            timeout = min(60, deadline - time.time())
+            if timeout < 5:
+                last = "time budget used up"
+                break
         started = time.time()
         try:
             # key in a header, never in the URL, so it can't appear in error messages
-            resp = requests.post(url, headers={"x-goog-api-key": key}, json=payload, timeout=60)
+            resp = requests.post(url, headers={"x-goog-api-key": key}, json=payload, timeout=timeout)
         except requests.RequestException as e:
             last = f"network error: {type(e).__name__}"
             _record(model, started, 0)
@@ -59,10 +65,11 @@ def _content(res):
 
 
 def ask_json(model, prompt, system=None, tries=5):
-    """One call that must return JSON. Used by the evaluator."""
+    """One call that must return JSON. Used by the checker and the fallback pipeline.
+    Temperature 0: a judge should give the same verdict for the same draft."""
     payload = {
         "contents": [{"role": "user", "parts": [{"text": prompt}]}],
-        "generationConfig": {"responseMimeType": "application/json"},
+        "generationConfig": {"responseMimeType": "application/json", "temperature": 0},
     }
     if system:
         payload["systemInstruction"] = {"parts": [{"text": system}]}

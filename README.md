@@ -4,7 +4,7 @@
 Two AI agents research and write, a different AI model reviews their drafts, and plain code decides when the work is
 really done. Nothing reaches the website until it passes every check.
 
-[**Live site**](https://bsaiprasad13-main.github.io/jarvis-ai-agent/) · Runs daily at 10:00 IST on **Zoho Catalyst** · **68 offline tests** · **checker catches 10/10 invented details** ([measured](evals/)) · MIT license
+[**Live site**](https://bsaiprasad13-main.github.io/jarvis-ai-agent/) · Runs daily at 10:00 IST on **Zoho Catalyst** · **68 offline tests** · **checker catches 39/39 invented details** ([measured](evals/), up from 4/10) · MIT license
 
 ![The Jarvis website: today's report with its checks, and the Ask Jarvis panel](docs/site.png)
 
@@ -22,7 +22,7 @@ really done. Nothing reaches the website until it passes every check.
 |---|---|
 | **Agents, function calling, tools** | Two Gemini desk agents with 7 tools each decide what to fetch, read, look up and submit (`jarvis_agent/agent.py`, `tools.py`) |
 | **Prompt engineering and context management** | System prompts and the checker's rubric are built from one spec (`jarvis.config.json`); the checker is told exactly which sections each desk owns; lessons carry over to the next day |
-| **RAG and reducing hallucinations** | Desks must read the article before explaining it; agent writers see story IDs, never URLs, so they can't invent links; background comes from a real lookup in Edgepedia (a free encyclopedia API); the chat answers only from retrieved stories and must cite them. **Measured:** the checker catches 10/10 invented details in a labelled test set, up from 4/10 ([evals](evals/)) |
+| **RAG and reducing hallucinations** | Desks must read the article before explaining it; agent writers see story IDs, never URLs, so they can't invent links; background comes from a real lookup in Edgepedia (a free encyclopedia API); the chat answers only from retrieved stories and must cite them. **Measured:** in a labelled test the checker went from catching 4/10 invented details to 39/39 over 3 runs, including held-out cases, while passing every faithful draft ([evals](evals/)) |
 | **Edge-case handling** | Early "finish", crashes, half-done work, model outages and quota limits each have a fixed route in code, and each has a test |
 | **End-to-end deployment** | Spec → prompts and tools → offline tests → test runs with fault injection → production on Zoho Catalyst → alerts and a 10:30 watchdog |
 | **Integrations** | Gemini, Product Hunt GraphQL, Hacker News API, RSS feeds, Edgepedia API, Resend email, Zoho Catalyst (Job Scheduling, Stratus), GitHub Pages |
@@ -56,7 +56,7 @@ really done. Nothing reaches the website until it passes every check.
 | Part | What it does | Where |
 |---|---|---|
 | **Desk agents** | Gemini with function calling and 7 tools. Each desk owns its own sources and sections and decides what to fetch, what to read in full, what to look up, and when its draft is ready. | `jarvis_agent/agent.py`, `tools.py` |
-| **Checker** | A *different* model in a fresh context scores each draft on grounded, specific, relevant, best picks and honest, with evidence, and returns exact fixes. It sees each pick with an excerpt (first 500 characters) of any article the desk read. Grounding must score 4 or more out of 5, and it also lists every factual claim: if the article doesn't support one, **code** fails the draft's grounding. | `jarvis_agent/evaluator.py` |
+| **Checker** | A *different* model in a fresh context scores each draft on grounded, specific, relevant, best picks and honest, with evidence, and returns exact fixes. It sees each pick with the full text the desk read (up to 2,500 characters per article). Grounding must score 4 or more out of 5, and it also lists every factual claim: if the article doesn't support one, **code** fails the draft's grounding. Checker calls use temperature 0. | `jarvis_agent/evaluator.py` |
 | **Harness** | Plain code. Gives each desk a contract, refuses `finish` until it's met, routes failures, enforces time budgets, and runs final checks. | `jarvis_agent/harness.py` |
 | **Memory** | Links already published (no repeats for 14 days), feed addresses that worked, and one lesson per desk per day, read at the start of the next run. | `jarvis_agent/store.py` (Stratus `state/memory.json`) |
 | **Agent spec** | Reader, sections and desks in one file. A new audience or new sources is a config change, not a code change. | `jarvis.config.json` |
@@ -90,7 +90,7 @@ Every rule below is enforced in code, not by asking the model nicely.
   - the **Catalyst Job function end to end**, with a fake SDK and an in-memory bucket: clean run, degraded run, and crash
 - **Real runs with real models and sources**, including **fault injection** (`fault=india:writer`). In one test the India writer was crashed on purpose, both backup models then hit their quota (HTTP 429), and the original pipeline wrote the section. All final checks still passed.
 
-- **A measured test of the checker** (`python evals/checker_eval.py`, real model calls): 20 labelled drafts, half of them with one invented detail. The first version of the checker caught **4/10**. After adding a claim-by-claim fact check that code enforces, it caught **10/10** and still passed 10/10 faithful drafts. Details and every case: [`evals/`](evals/).
+- **A measured test of the checker** (`python evals/checker_eval.py after 3`, real model calls): 20 labelled drafts, half with one invented detail, plus 6 held-out long articles written after the fix. The first version of the checker caught **4/10**. After a claim-by-claim fact check that code enforces, full read text and temperature 0, it caught **39/39** over 3 runs and passed **38/38** faithful drafts. Details and every case: [`evals/`](evals/).
 
 ## 4. How we know it works every day
 
@@ -115,7 +115,7 @@ Every rule below is enforced in code, not by asking the model nicely.
 Fixes found by reading real run logs and measuring, each covered by a test:
 
 - An accepted draft contained details the checker itself had flagged as invented, because grounding scored 3. **Grounding now needs 4.**
-- A labelled test showed the checker still passed 6 of 10 drafts with an invented detail. **It now fact-checks each claim, and code enforces the result: 10 of 10 caught.**
+- A labelled test showed the checker still passed 6 of 10 drafts with an invented detail. **It now fact-checks each claim, and code enforces the result: 39 of 39 caught over 3 runs.**
 - A draft that used up its tries could still ship with weak grounding. **It now ships only with grounding of 4 or more.**
 - The checker penalised the Global desk for "missing India news", which is the other desk's job. **It's now told which sections each desk owns.**
 - A broken reply from the checker counted against the writer. **It now falls through to the next checker model and costs no draft.**
@@ -143,7 +143,7 @@ Fixes found by reading real run logs and measuring, each covered by a test:
 ## 7. Known limits
 
 - **One model provider.** Writers and checker are different Gemini models, so they're independent of each other's mistakes but not of a Gemini-wide outage. If every desk model fails, the original pipeline still writes the brief, on Gemini too. A second provider is the next step.
-- **The checker sees excerpts, not whole articles,** to keep each review fast and cheap.
+- **Articles are read up to 2,500 characters.** The writer and the checker see the same text, but not the rest of a very long page.
 - **Some feeds go through a relay.** When a site blocks direct feed requests, the fetcher retries through the public rss2json service.
 - **Earlier days on the site come from v1**, so they show headlines only.
 - **Catalyst Development environment.** The job and bucket run in Catalyst's Development environment, which is enough for one scheduled job a day.

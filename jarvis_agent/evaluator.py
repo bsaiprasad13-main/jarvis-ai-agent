@@ -10,7 +10,7 @@ Two layers:
    evidence. A draft passes only with no rule broken, no dimension below 3,
    grounding at 4 or more, and an average of at least 3.5 (shown as 7/10).
 3. A fact check: the model lists each factual claim in a read pick's "why" and
-   says whether the article excerpt supports it. If any claim is unsupported,
+   says whether the article text supports it. If any claim is unsupported,
    code caps grounding at 2, whatever score the model gave (measured in evals/).
 """
 from . import gemini, tools
@@ -20,7 +20,7 @@ from .desks import READER, SECTION_BRIEFS, TEST_QUESTION
 
 MIN_WORDS, MAX_WORDS = 12, 70
 RUBRIC = {
-    "grounded": "Facts only: every 'why' is supported by the article excerpt (where given) or the title. Nothing invented. Relevance and section fit are judged elsewhere, not here.",
+    "grounded": "Facts only: every 'why' is supported by the article text (where given) or the title. Nothing invented. Relevance and section fit are judged elsewhere, not here.",
     "specific": "Each 'why' names something concrete from the story (a feature, number, decision) and what the reader can learn from it. No generic lines.",
     "relevant": f"Picks pass the reader's test: {TEST_QUESTION}",
     "selection": "The strongest available stories were picked; no clearly better unused candidate was skipped; no filler.",
@@ -77,7 +77,7 @@ def _draft_text(state, digest):
             lines.append(f"- [{e.get('item_id')}] {e.get('title')} ({item.get('source', '?')}, {read})\n"
                          f"  why: {e.get('why_it_matters')}")
             if item.get("article"):
-                lines.append(f"  article excerpt: {item['article'][:500]}")
+                lines.append(f"  article text: {item['article']}")   # everything the desk read (up to 2,500 characters)
         note = (digest.get("notes") or {}).get(key) or {}
         if note.get("status") and note["status"] != "normal":
             lines.append(f"  note: {note['status']} - {note.get('message', '')}")
@@ -110,9 +110,9 @@ Return JSON:
  "issues": [{{"item_id": "<id or null>", "problem": "...", "fix": "..."}}]}}
 List at most 6 issues, most important first. Each fix must say exactly what to change.
 
-FACT CHECK (fill "claims"): for every pick that has an article excerpt, list each specific claim in its
+FACT CHECK (fill "claims"): for every pick that has an article text, list each specific claim in its
 "why": numbers, amounts, names, investors, customers, results, comparisons ("first", "beats", "only") and
-scope ("all", "permanently", "already"). Set "supported" to true only if the excerpt or title states it;
+scope ("all", "permanently", "already"). Set "supported" to true only if the article text or title states it;
 a claim that goes beyond the text is false. Judge facts only here, not relevance.
 Add to the JSON: "claims": [{{"item_id": "...", "claim": "...", "supported": true or false}}]
 

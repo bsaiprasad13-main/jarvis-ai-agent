@@ -1,13 +1,13 @@
 """Measure the checker: does it catch invented details, and does it pass faithful drafts?
 
-    python evals/checker_eval.py [label]    # real model calls (needs GEMINI_API_KEY), about 20 calls
+    python evals/checker_eval.py [label] [runs]   # real model calls (needs GEMINI_API_KEY), 26 per run
 
 Each case is a two-pick draft for the desk that would write it: the case pick plus a fixed, faithful control pick. Both picks
 count as read in full, so the checker sees each article excerpt exactly as it does in a real run. A
 draft is rejected for grounding when the checker scores "grounded" below 4, the same bar used in
 production (evaluator.PASS_MIN_GROUNDED).
 
-Writes evals/results.md (summary and per-case table) and evals/results.json.
+Writes evals/<label>.json. Held-out cases (long articles, key fact late in the text) are scored separately.
 """
 import json
 import os
@@ -54,55 +54,49 @@ def verdict(grounded):
     return "pass" if grounded >= evaluator.PASS_MIN_GROUNDED else "fail"
 
 
-def main():
-    data = load_cases()
-    rows = []
-    for case in data["cases"]:
-        state, digest = draft_for(case, data)
-        started = time.time()
+def run_case(case, data, case_set):
+    state, digest = draft_for(case, data)
+    started = time.time()
+    r = evaluator.review(state, digest)
+    if r.get("unavailable"):                       # a temporary model error (503/429): wait and ask once more
+        time.sleep(15)
         r = evaluator.review(state, digest)
-        grounded = (r.get("rubric") or {}).get("grounded", {}).get("score")
-        rows.append({"id": case["id"], "label": case["label"], "change": case.get("change", ""),
-                     "grounded": grounded, "accepted": r.get("accepted"), "score": r.get("score"),
-                     "model": r.get("evaluator_model"), "seconds": round(time.time() - started, 1),
-                     "rule_errors": r.get("rule_errors"), "unavailable": bool(r.get("unavailable")),
-                     "evidence": (r.get("rubric") or {}).get("grounded", {}).get("evidence", "")[:200]})
-        print(f"{case['id']:>4} {case['label']:<9} grounded={grounded} accepted={r.get('accepted')}")
+    grounded = (r.get("rubric") or {}).get("grounded", {}).get("score")
+    print(f"{case['id']:>4} {case['label']:<9} grounded={grounded} -> {verdict(grounded)}")
+    return {"set": case_set, "id": case["id"], "label": case["label"], "change": case.get("change", ""),
+            "grounded": grounded, "verdict": verdict(grounded), "model": r.get("evaluator_model"),
+            "seconds": round(time.time() - started, 1), "unavailable": bool(r.get("unavailable")),
+            "evidence": (r.get("rubric") or {}).get("grounded", {}).get("evidence", "")[:200]}
 
+
+def score(rows):
     done = [x for x in rows if not x["unavailable"]]
     bad = [x for x in done if x["label"] == "invented"]
     good = [x for x in done if x["label"] == "faithful"]
-    caught = [x for x in bad if x["grounded"] is not None and x["grounded"] < evaluator.PASS_MIN_GROUNDED]
-    passed = [x for x in good if x["grounded"] is not None and x["grounded"] >= evaluator.PASS_MIN_GROUNDED]
+    return {"invented_caught": f"{sum(x['verdict'] == 'fail' for x in bad)}/{len(bad)}",
+            "faithful_passed": f"{sum(x['verdict'] == 'pass' for x in good)}/{len(good)}",
+            "no_answer": len(rows) - len(done)}
+
+
+def main():
+    data = load_cases()
+    runs = int(sys.argv[2]) if len(sys.argv) > 2 else 1        # repeat to see how stable the verdicts are
+    rows = []
+    for n in range(runs):
+        rows += [dict(run_case(c, data, "main"), run=n + 1) for c in data["cases"]]
+        rows += [dict(run_case(c, data, "held_out"), run=n + 1) for c in data.get("held_out", [])]
     oks = sorted(c["ms"] for c in gemini.CALLS if c.get("ok"))
 
     def pct(q):
         return round(oks[min(len(oks) - 1, int(q * len(oks)))] / 1000, 1) if oks else None
-    summary = {
-        "invented_caught": f"{len(caught)}/{len(bad)}",
-        "faithful_passed": f"{len(passed)}/{len(good)}",
-        "unavailable": len(rows) - len(done),
-        "checker_models": sorted({x["model"] for x in done if x["model"]}),
-        "latency_p50_s": pct(0.5), "latency_p95_s": pct(0.95),
-        "model_calls": len(gemini.CALLS), "failed_calls": sum(1 for c in gemini.CALLS if not c.get("ok")),
-    }
+    summary = {"runs": runs, "main": score([x for x in rows if x["set"] == "main"]),
+               "held_out": score([x for x in rows if x["set"] == "held_out"]),
+               "checker_models": sorted({x["model"] for x in rows if x["model"]}),
+               "latency_p50_s": pct(0.5), "latency_p95_s": pct(0.95),
+               "model_calls": len(gemini.CALLS), "failed_calls": sum(1 for c in gemini.CALLS if not c.get("ok"))}
     label = sys.argv[1] if len(sys.argv) > 1 else "results"
     with open(os.path.join(HERE, f"{label}.json"), "w", encoding="utf-8") as f:
         json.dump({"summary": summary, "cases": rows}, f, indent=1)
-    lines = ["# Checker evaluation", "",
-             "20 labelled drafts (`checker_cases.json`): 10 faithful, 10 with one invented detail. "
-             "Run with `python evals/checker_eval.py`.", "",
-             f"- **Invented details caught:** {summary['invented_caught']}",
-             f"- **Faithful drafts passed:** {summary['faithful_passed']}",
-             f"- **Checker model(s):** {', '.join(summary['checker_models'])}",
-             f"- **Checker latency:** p50 {summary['latency_p50_s']} s, p95 {summary['latency_p95_s']} s "
-             f"({summary['model_calls']} calls, {summary['failed_calls']} retried or failed)", "",
-             "This test measures grounding only (are the facts in the article?). The other rubric points, such as "
-             "story selection, are not part of it. A draft fails grounding below 4 of 5.", "",
-             "| Case | Label | What was changed | Grounded (1-5) | Grounding verdict |", "|---|---|---|---|---|"]
-    lines += [f"| {x['id']} | {x['label']} | {x['change'] or '-'} | {x['grounded']} | {verdict(x['grounded'])} |" for x in rows]
-    with open(os.path.join(HERE, f"{label}.md"), "w", encoding="utf-8") as f:
-        f.write("\n".join(lines) + "\n")
     print(json.dumps(summary, indent=1))
 
 

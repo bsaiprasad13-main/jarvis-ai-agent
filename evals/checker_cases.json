@@ -183,5 +183,59 @@
   "source": "Product Hunt",
   "article": "Fieldnote is a meeting recorder for Mac and Windows that transcribes and summarises meetings entirely on the user's laptop, using a small open speech model and a 3-billion-parameter language model. Nothing is uploaded unless the user exports a summary. The app is free for meetings up to 30 minutes, and a $6 monthly plan removes the limit.",
   "why": "Fieldnote records, transcribes and summarises meetings fully on the laptop with small open models, so nothing is uploaded, and it is free for meetings up to 30 minutes."
- }
+ },
+ "about_held_out": "Held-out cases, written after the checker was changed and never used to tune it. Each article is long (over 1,000 characters) and the key fact sits late in the text, beyond the first 500 characters.",
+ "held_out": [
+  {
+   "id": "h1",
+   "label": "faithful",
+   "title": "Agrivue raises Rs 18 crore for an offline pest-spotting app for cotton farmers",
+   "source": "YourStory",
+   "article": "Agrivue, a Nagpur-based agritech startup, builds a phone app that helps cotton farmers spot pests from photos of their leaves. The company was started by two former agricultural scientists who spent years working with farmer groups in Vidarbha. Farmers take a picture with a basic smartphone, and the app suggests what the problem might be and which treatment is safest for that stage of the crop. The founders say most farmers in the region still rely on advice from pesticide dealers, who have a reason to sell more spray than is needed. Over the last season the app was used by farmer producer organisations in four districts, and the team says it learned that advice must work offline, because many fields have poor mobile coverage. The new version stores its model on the phone and syncs results when a signal returns. Agrivue has now raised Rs 18 crore in a seed round led by Sahyadri Ventures, with participation from two angel investors. It says the money will go into adding soybean and tur dal, and into a voice interface in Marathi so farmers who cannot read can use it.",
+   "why": "Agrivue raised Rs 18 crore led by Sahyadri Ventures for an offline pest-spotting app for cotton farmers, and will add soybean, tur dal and a Marathi voice interface."
+  },
+  {
+   "id": "h2",
+   "label": "faithful",
+   "title": "Querylane explains every AI-written SQL query before you trust the answer",
+   "source": "Hacker News",
+   "article": "Querylane is an open-source tool for teams that let language models answer questions over company databases. Its authors describe a common failure: a model writes a query that runs without errors but answers a slightly different question, for example counting all orders instead of only paid ones, and nobody notices because the number looks plausible. Querylane sits between the model and the database. It parses every generated SQL query, explains in plain English what the query will actually compute, and shows that explanation to the user next to the result. The project's maintainers say this made wrong answers far easier to catch in their own testing. It works with any model provider, because it only reads the SQL text, not the model that produced it. The tool supports PostgreSQL and SQLite today. In the latest release, Querylane also refuses to run any query that writes, updates or deletes data unless an administrator has turned on write access for that connection, and it logs every query it runs to a local file for later review.",
+   "why": "Querylane explains each AI-written SQL query in plain English, blocks any write query unless an admin enables it, and logs every query, a useful guard for database chatbots."
+  },
+  {
+   "id": "h3",
+   "label": "faithful",
+   "title": "Sahaya Health cuts nurses' note-taking time with an Odia speech tool",
+   "source": "Inc42",
+   "article": "Sahaya Health runs a network of rural clinics in Odisha that are staffed by nurses, with doctors available over video calls. The company says the biggest delay in its clinics was not the consultation itself but the paperwork: nurses spent a long time writing up each visit so the remote doctor had the full history before the call. Sahaya built a tool that listens to the nurse's conversation with the patient in Odia, drafts a structured note, and lets the nurse correct it before it is sent. The company stresses that the doctor still makes every diagnosis. Patients are asked for consent before any recording starts, and the audio is deleted once the nurse approves the note. The model runs on a small server inside each district office, so recordings do not leave the state. After a three-month trial in 22 clinics, Sahaya says the time nurses spend on notes fell from about 14 minutes to 5 minutes per patient, and that doctors asked fewer follow-up questions during calls. It plans to bring the tool to all 60 of its clinics by the end of the year.",
+   "why": "Sahaya's Odia speech tool cut nurses' note time from about 14 to 5 minutes per patient in a 22-clinic trial, while doctors still make every diagnosis."
+  },
+  {
+   "id": "h4",
+   "label": "invented",
+   "change": "wrong investor (late fact)",
+   "title": "Agrivue raises Rs 18 crore for an offline pest-spotting app for cotton farmers",
+   "source": "YourStory",
+   "article": "Agrivue, a Nagpur-based agritech startup, builds a phone app that helps cotton farmers spot pests from photos of their leaves. The company was started by two former agricultural scientists who spent years working with farmer groups in Vidarbha. Farmers take a picture with a basic smartphone, and the app suggests what the problem might be and which treatment is safest for that stage of the crop. The founders say most farmers in the region still rely on advice from pesticide dealers, who have a reason to sell more spray than is needed. Over the last season the app was used by farmer producer organisations in four districts, and the team says it learned that advice must work offline, because many fields have poor mobile coverage. The new version stores its model on the phone and syncs results when a signal returns. Agrivue has now raised Rs 18 crore in a seed round led by Sahyadri Ventures, with participation from two angel investors. It says the money will go into adding soybean and tur dal, and into a voice interface in Marathi so farmers who cannot read can use it.",
+   "why": "Agrivue raised Rs 18 crore led by Accel for an offline pest-spotting app for cotton farmers, and will add soybean, tur dal and a Marathi voice interface."
+  },
+  {
+   "id": "h5",
+   "label": "invented",
+   "change": "invented capability (late fact)",
+   "title": "Querylane explains every AI-written SQL query before you trust the answer",
+   "source": "Hacker News",
+   "article": "Querylane is an open-source tool for teams that let language models answer questions over company databases. Its authors describe a common failure: a model writes a query that runs without errors but answers a slightly different question, for example counting all orders instead of only paid ones, and nobody notices because the number looks plausible. Querylane sits between the model and the database. It parses every generated SQL query, explains in plain English what the query will actually compute, and shows that explanation to the user next to the result. The project's maintainers say this made wrong answers far easier to catch in their own testing. It works with any model provider, because it only reads the SQL text, not the model that produced it. The tool supports PostgreSQL and SQLite today. In the latest release, Querylane also refuses to run any query that writes, updates or deletes data unless an administrator has turned on write access for that connection, and it logs every query it runs to a local file for later review.",
+   "why": "Querylane explains each AI-written SQL query in plain English and automatically rewrites wrong queries into correct ones, a useful guard for database chatbots."
+  },
+  {
+   "id": "h6",
+   "label": "invented",
+   "change": "wrong numbers (late fact)",
+   "title": "Sahaya Health cuts nurses' note-taking time with an Odia speech tool",
+   "source": "Inc42",
+   "article": "Sahaya Health runs a network of rural clinics in Odisha that are staffed by nurses, with doctors available over video calls. The company says the biggest delay in its clinics was not the consultation itself but the paperwork: nurses spent a long time writing up each visit so the remote doctor had the full history before the call. Sahaya built a tool that listens to the nurse's conversation with the patient in Odia, drafts a structured note, and lets the nurse correct it before it is sent. The company stresses that the doctor still makes every diagnosis. Patients are asked for consent before any recording starts, and the audio is deleted once the nurse approves the note. The model runs on a small server inside each district office, so recordings do not leave the state. After a three-month trial in 22 clinics, Sahaya says the time nurses spend on notes fell from about 14 minutes to 5 minutes per patient, and that doctors asked fewer follow-up questions during calls. It plans to bring the tool to all 60 of its clinics by the end of the year.",
+   "why": "Sahaya's Odia speech tool cut nurses' note time from about 14 to 2 minutes per patient across all 60 clinics, while doctors still make every diagnosis."
+  }
+ ]
 }

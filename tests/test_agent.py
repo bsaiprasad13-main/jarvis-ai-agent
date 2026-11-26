@@ -336,9 +336,9 @@ check("a claim the article doesn't support caps grounding at 2, even if the mode
       rv["rubric"]["grounded"]["score"] == 2 and not rv["accepted"] and "raised $40M" in rv["issues"][0]["problem"])
 cases = json.load(open(os.path.join(ROOT, "evals", "checker_cases.json"), encoding="utf-8"))
 labels = [c["label"] for c in cases["cases"]]
-check("the checker test set is balanced and every article fits in the checker's 500-character view",
+check("the checker test set is balanced, and every article fits in what a desk reads (2,500 characters)",
       labels.count("faithful") == labels.count("invented") == 10
-      and all(len(c["article"]) <= 500 for c in cases["cases"] + [cases["control"], cases["control_global"]]))
+      and all(len(c["article"]) <= 2500 for c in cases["cases"] + cases.get("held_out", []) + [cases["control"], cases["control_global"]]))
 gemini.ask_json = real
 
 check("evaluator is told which sections the desk owns", "owns ONLY these sections: india_news" in evaluator._prompt(gs, {"india_news": [], "notes": {}}))
