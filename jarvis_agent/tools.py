@@ -11,7 +11,7 @@ import urllib.parse
 
 from . import fetchers
 from .config import MAX_ARTICLE_READS, MAX_DRAFTS, MAX_LOOKUPS, MAX_SEARCHES
-from .vector_store import VectorStore
+from .dedup import Deduplicator
 
 SOURCES = {
     "Product Hunt": {"method": "api", "url": "api", "section": "tools"},
@@ -49,7 +49,7 @@ class RunState:
         self.steps = 0
         self.seconds = 0
         self.error = None
-        self._dedup = VectorStore()
+        self._dedup = Deduplicator()
         self._next = 1
 
     def add_item(self, item):

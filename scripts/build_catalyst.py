@@ -15,7 +15,7 @@ import sys
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FN = os.path.join(ROOT, "functions", "jarvis_agent")
 KEEP = {"main.py", "catalyst-config.json", "requirements.txt", "catalyst-inputs.json"}
-LIBS = ["requests~=2.34.2", "Jinja2==3.1.6", "python-dotenv==1.2.3", "zcatalyst-sdk==1.4.0"]
+LIBS = ["requests~=2.34.2", "python-dotenv==1.2.3", "zcatalyst-sdk==1.4.0"]
 
 for name in os.listdir(FN):                                   # clean the previous build
     if name not in KEEP:

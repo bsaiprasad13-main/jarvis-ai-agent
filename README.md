@@ -88,6 +88,7 @@ Every rule below is enforced in code, not by asking the model nicely.
   - **FAILED:** the run crashed or a final check failed. The email names the failing check, what was recovered on the way, each desk's attempts, and the last lines of the error.
   - **Needs attention:** the brief went out, but the original pipeline had to write a section because every agent writer failed.
   - **No email** when a backup model quietly took over. That's normal operation, and it's visible on the report card.
+- **A watchdog at 10:30 IST** (a second cron, same function, `watchdog=1`) checks that today's report was actually published with every check passed, and emails if not. It catches the failures a run can't report itself: Catalyst not starting the job, or stopping it hard.
 - **Monitoring on the website:** for each model, the number of calls, success rate, median and p95 response time, and failure codes. It also shows how often the checker accepts a first draft, and what the system caught: drafts written from headlines alone, made-up IDs, claims the article didn't support, and early `finish` calls.
 
 ## 7. What changed, and what the logs taught us
@@ -160,7 +161,7 @@ In the Catalyst console:
 1. Create a Stratus bucket (Public template) and allow the website's domain in Bucket CORS.
 2. Create a Function job pool.
 3. Fill in `catalyst.env` (the deploy script sends it to the function).
-4. Create a daily 10:00 IST cron that runs the job function.
+4. Create a daily 10:00 IST cron that runs the job function, and a 10:30 IST cron with the parameter `watchdog=1`.
 
 To check the alert email, submit one job with the parameter `test_alert=1`: it sends a test alert and runs nothing else. `mode=test` runs without touching memory; `fault=india:writer` crashes that writer on purpose to show the recovery.
 
@@ -180,6 +181,7 @@ Environment variables:
 | `jarvis_agent/evaluator.py` | Code rules + rubric review by a different model |
 | `jarvis_agent/alerts.py` | When to email, and what the email says |
 | `jarvis_agent/storage.py`, `store.py` | Local folder or Stratus bucket; memory across runs |
+| `jarvis_agent/dedup.py`, `fetchers.py`, `legacy.py` | Near-duplicate filter, source fetchers, and the original pipeline kept as the last fallback |
 | `jarvis_agent/gemini.py` | Gemini REST client: function calling, retries, time limits, per-call timing |
 | `functions/jarvis_agent/main.py` | The Zoho Catalyst Job function entry point |
 | `run.py` | One run: harness → publish and read back → memory → alert |

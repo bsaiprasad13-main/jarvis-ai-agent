@@ -46,6 +46,20 @@ def publish_report(store, prefix, file_prefix, stamp, brief, trace, mode):
     return [r["link"] for k in SECTION_KEYS for r in (back.get("email") or {}).get(k, [])]
 
 
+def check_today(store, prefix):
+    """Watchdog: was today's daily report published? Returns (ok, reason)."""
+    today = datetime.datetime.now(IST).strftime("%Y-%m-%d")
+    index = json.loads(store.read_text(f"{prefix}index.json") or "[]")
+    todays = [r for r in index if r.get("mode") == "daily" and r["id"].startswith(today)]
+    if not todays:
+        return False, (f"No daily report was published today ({today}). The 10:00 run may not have started, "
+                       "or Catalyst stopped it before it could report. Check Job Scheduling > Jobs and the function logs.")
+    last = todays[-1]
+    if last.get("checks") and last.get("checks_passed", 0) < last["checks"]:
+        return False, f"Today's report ({last['id']}) was published with failed checks. See it on the website."
+    return True, f"today's report {last['id']} is published"
+
+
 def run_once(memory, store, prefix, file_prefix, mode, save_memory, deadline=None, log=print):
     """One full run. Returns (status, reasons, report_checks, trace, error)."""
     stamp = datetime.datetime.now(IST).strftime("%Y-%m-%d_%H%M")

@@ -12,7 +12,7 @@ import time
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 
-from jarvis_agent import agent, email_sender, evaluator, fetchers, gemini, harness, legacy, tools  # noqa: E402
+from jarvis_agent import agent, evaluator, fetchers, gemini, harness, legacy, tools  # noqa: E402
 from jarvis_agent.config import DESK_MODEL, EVALUATOR_BACKUP, EVALUATOR_MODEL, EVALUATOR_MODELS, MAX_STEPS, RESERVE_MODEL  # noqa: E402
 from jarvis_agent.desks import GLOBAL, INDIA  # noqa: E402
 from jarvis_agent.store import Memory  # noqa: E402
@@ -316,11 +316,7 @@ r2 = tools.submit_sections(rs2, **ok_draft)
 check("total evaluator outage does not use up a draft", r2.get("evaluator_unavailable") and rs2.drafts == [])
 gemini.ask_json = real_fake
 
-# --- 9. email + website data -------------------------------------------------
-html = email_sender.render_email_html(email, trace)
-check("web text is escaped in the email", "<script>x" not in html)
-check("email footer shows each desk and the harness checks", "Global desk" in html and "India desk" in html
-      and "Harness checks" in html)
+# --- 9. report data -----------------------------------------------------------
 import run as runner  # noqa: E402
 from jarvis_agent import alerts  # noqa: E402
 from jarvis_agent.storage import LocalStorage  # noqa: E402
@@ -439,6 +435,14 @@ fake_sdk.initialize = lambda req=None: types.SimpleNamespace(stratus=lambda: typ
 catalyst_main.handler(types.SimpleNamespace(get_all_job_params=lambda: {"test_alert": "1"}), ctx4)
 check("test_alert only sends a test alert and runs nothing", sent_alerts[-1] == "failed" and len(sent_alerts) == 3)
 check("run ids are India time and marked so", idx[-1].get("tz") == "IST")
+before = len(sent_alerts)
+today_id = __import__("datetime").datetime.now(runner.IST).strftime("%Y-%m-%d_1000")
+BUCKET["reports/index.json"] = json.dumps([{"id": today_id, "mode": "daily", "checks": 7, "checks_passed": 7}]).encode()
+catalyst_main.handler(types.SimpleNamespace(get_all_job_params=lambda: {"watchdog": "1"}), FakeContext())
+check("watchdog stays quiet when today's daily report exists", len(sent_alerts) == before)
+BUCKET.clear()
+catalyst_main.handler(types.SimpleNamespace(get_all_job_params=lambda: {"watchdog": "1"}), FakeContext())
+check("watchdog alerts when today's daily report is missing", len(sent_alerts) == before + 1 and sent_alerts[-1] == "failed")
 alerts.send = real_send
 
 # --- 10. memory --------------------------------------------------------------

@@ -260,7 +260,7 @@ td.num { font-variant-numeric: tabular-nums; font-family: var(--mono); font-size
       const info = r.kind === "pipeline" ? "one model call, no review" :
         `${r.stories} stories · ${r.checks_passed}/${r.checks} checks${r.recoveries ? ` · ${r.recoveries} recovered` : ""}`;
       return `<button class="run-btn ${r.kind}" data-id="${esc(r.id)}" aria-pressed="${r.id === active}">
-        <span class="kind">${r.kind === "pipeline" ? "Before: old pipeline" : (r.mode === "daily" ? "Daily report" : esc(r.mode))}</span>
+        <span class="kind">${r.kind === "pipeline" ? "Before: old pipeline" : (r.mode === "daily" ? "Daily report" : "Test run")}</span>
         <span>${esc(when(r.id))}</span><small>${esc(info)}</small></button>`;
     }).join("");
     $("runs").querySelectorAll("button").forEach((b) => b.addEventListener("click", () => { location.hash = "r-" + b.dataset.id; }));
@@ -331,7 +331,7 @@ td.num { font-variant-numeric: tabular-nums; font-family: var(--mono); font-size
     const passed = finals.filter((c) => c.passed).length, retried = t.report_card.filter((c) => c.final === false && !c.passed).length;
     const stories = SECTIONS.reduce((n, [k]) => n + (rec.email[k] || []).length, 0);
     $("run").innerHTML = `
-      <section><div class="section-head"><div class="eyebrow">${rec.mode === "daily" ? "Daily report" : "Report (" + esc(rec.mode) + ")"} · ${esc(when(rec.id))}</div><h2>The brief</h2></div>
+      <section><div class="section-head"><div class="eyebrow">${rec.mode === "daily" ? "Daily report" : "Test run"} · ${esc(when(rec.id))}</div><h2>The brief</h2></div>
         <div class="meta"><span class="chip">${stories} stories</span>
           <span class="chip ${passed === finals.length ? "ok" : "bad"}">${passed}/${finals.length} checks passed</span>
           ${retried ? `<span class="chip warn">${retried} problem${retried > 1 ? "s" : ""} fixed automatically</span>` : ""}<span class="chip">made in ${t.seconds}s</span></div>
