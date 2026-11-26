@@ -12,15 +12,14 @@ Two layers:
 """
 from . import gemini
 from .config import EVALUATOR_BACKUP, EVALUATOR_MODELS
-from .desks import SECTION_BRIEFS
+from .desks import READER, SECTION_BRIEFS, TEST_QUESTION
 
-READER = ("a final-year engineering student moving into product management, "
-          "looking for Associate PM / PM roles as a fresher")
+
 MIN_WORDS, MAX_WORDS = 12, 70
 RUBRIC = {
     "grounded": "Every 'why' is supported by the article excerpt (where given) or the title. Nothing invented.",
     "specific": "Each 'why' names something concrete from the story (a feature, number, decision) and what the reader can learn from it. No generic lines.",
-    "relevant": "Picks genuinely help someone breaking into product management right now.",
+    "relevant": f"Picks pass the reader's test: {TEST_QUESTION}",
     "selection": "The strongest available stories were picked; no clearly better unused candidate was skipped; no filler.",
     "honest": "Section notes are truthful about quiet days and failed sources.",
 }
@@ -50,6 +49,8 @@ def check_rules(state, digest):
             seen.add(iid)
             if item["section"] != "search" and item["section"] != key:
                 errors.append(f"{iid} ({item['source']}) belongs in {item['section']}, not {key}")
+            if e.get("background") and e["background"] not in state.lookups:
+                errors.append(f"{iid}: background must be a background_url returned by lookup_background")
             words = len(str(e.get("why_it_matters", "")).split())
             if words < MIN_WORDS:
                 errors.append(f"{iid}: why_it_matters is too short ({words} words). Be specific.")

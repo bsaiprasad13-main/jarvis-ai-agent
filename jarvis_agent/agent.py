@@ -6,11 +6,12 @@ each draft; a rejected draft comes back with feedback to fix. The desk cannot
 end its own run: `finish` is refused until the harness's done-check passes.
 """
 import datetime
+import os
 import time
 
 from . import evaluator, gemini
 from .config import MAX_ARTICLE_READS, MAX_DRAFTS, MAX_SEARCHES, MAX_STEPS
-from .desks import SECTION_BRIEFS, SECTION_TITLES
+from .desks import READER, SECTION_BRIEFS, SECTION_TITLES, TEST_QUESTION
 from .tools import RunState, declarations_for, dispatch
 
 
@@ -20,9 +21,8 @@ def system_prompt(desk, memory, role):
     sections = "\n".join(f"- {k} ({SECTION_TITLES[k]}): {SECTION_BRIEFS[k]}" for k in desk.sections)
     takeover = ("\nYou are the RESERVE writer: the first writer on this desk failed or left the job half done. "
                 "Do the whole job yourself from the start.\n") if role == "reserve" else ""
-    return f"""You are the {desk.title} of Jarvis, an autonomous news agent. Every morning Jarvis emails one digest to
-{evaluator.READER}. Every pick and every explanation must answer: "Would this genuinely help someone trying to
-break into product management right now?"
+    return f"""You are the {desk.title} of Jarvis, an autonomous news agent. Every morning Jarvis writes one brief for
+{READER}. Every pick and every explanation must answer: "{TEST_QUESTION}"
 {takeover}
 YOUR CONTRACT
 - Your sources (only these): {", ".join(desk.sources)}
@@ -36,6 +36,8 @@ YOUR CONTRACT
 HOW YOU WORK. You decide the order and what is worth your time:
 1. Gather: fetch your sources. If one fails, decide whether search_hacker_news can fill the gap.
 2. Investigate: read_article for promising stories before explaining them ({MAX_ARTICLE_READS} reads, {MAX_SEARCHES} searches).
+   When a story names a company, model or concept the reader may not know, lookup_background on Edgepedia and
+   attach it to that pick.
 3. Draft: submit_sections. An independent evaluator on a different model scores it on a rubric.
 4. Improve: if rejected, fix every point of feedback and resubmit ({MAX_DRAFTS} drafts max).
 5. Reflect: save_lesson with one specific note for tomorrow (name a source, a kind of story, or a mistake
@@ -58,6 +60,10 @@ def run_desk(desk, memory, model, log=print, role="writer", tries=5):
     contents = [{"role": "user", "parts": [{"text": f"Today is {today}. Do your desk's job for today's digest. Begin."}]}]
     system, decls = system_prompt(desk, memory, role), declarations_for(desk)
     started = time.time()
+    if os.environ.get("JARVIS_FAULT") == f"{desk.key}:{role}":     # fault-injection test: this writer crashes on purpose
+        state.error = "fault injected for testing (JARVIS_FAULT)"
+        log(f"  [{desk.key}/{role}] {state.error}")
+        return state
     try:
         for step_no in range(1, MAX_STEPS + 1):
             state.steps = step_no

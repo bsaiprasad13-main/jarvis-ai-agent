@@ -1,18 +1,25 @@
-"""The two desks and their contracts.
+"""The agent spec: who the brief is for, its sections, and the desks that write them.
 
-Each desk is its own agent with a written contract: which sources it owns,
-which sections it writes, and what "done" means for it. A desk can't touch
-another desk's sources or sections. The harness checks the contract in code.
+Everything here comes from jarvis.config.json, so a new agent (a different
+reader, different sections, different sources) is a config change, not a
+code change. Each desk is its own agent with a written contract: which sources
+it owns, which sections it writes, and what "done" means for it. The harness
+checks the contract in code.
 """
+import json
+import os
 from dataclasses import dataclass
 
-SECTION_BRIEFS = {
-    "tools": "AI tools useful for PM work (roadmapping, user research, analytics, prototyping, writing, "
-             "productivity) or for student/professional life.",
-    "ai_news": "Model releases, big company moves, funding, shutdowns: what is shaping the AI industry.",
-    "india_news": "Funding, layoffs, leadership changes, launches and big moves by Indian startups and companies.",
-}
-SECTION_TITLES = {"tools": "AI tools for PMs", "ai_news": "AI industry news", "india_news": "India startup & company news"}
+from .config import ROOT
+
+with open(os.path.join(ROOT, "jarvis.config.json"), encoding="utf-8") as _f:
+    SPEC = json.load(_f)
+
+READER = SPEC["reader"]
+TEST_QUESTION = SPEC["test_question"]
+BRIEF_TITLE = SPEC["brief_title"]
+SECTION_TITLES = {k: v["title"] for k, v in SPEC["sections"].items()}
+SECTION_BRIEFS = {k: v["brief"] for k, v in SPEC["sections"].items()}
 
 
 @dataclass(frozen=True)
@@ -22,13 +29,11 @@ class Desk:
     prefix: str         # item ids look like g12 / i7
     sources: tuple
     sections: tuple
-    min_read: int       # picks that must be read in full before a draft can pass
+    min_read: int       # picks that must be read in full (or tried) before a draft can pass
     max_items: int = 8
     min_items: int = 3  # aim; fewer is allowed only with an honest "quiet" note
 
 
-GLOBAL = Desk("global", "Global desk", "g",
-              ("Product Hunt", "Hacker News", "TechCrunch", "VentureBeat"), ("tools", "ai_news"), min_read=3)
-INDIA = Desk("india", "India desk", "i",
-             ("YourStory", "Inc42", "Business Standard Technology"), ("india_news",), min_read=2)
-DESKS = (GLOBAL, INDIA)
+DESKS = tuple(Desk(d["key"], d["title"], d["prefix"], tuple(d["sources"]), tuple(d["sections"]), d["min_read"],
+                   d.get("max_items", 8), d.get("min_items", 3)) for d in SPEC["desks"])
+GLOBAL, INDIA = DESKS[0], DESKS[1]

@@ -62,11 +62,11 @@
     </style>
 </head>
 <body>
-    <h1>Your Daily PM Transition Digest</h1>
+    <h1>Your Daily AI Brief</h1>
     <p>Here is your curated list of tools, AI news, and startup updates for today.</p>
 
     <!-- Section 1: AI Tools -->
-    <h2>🛠️ AI Tools for Product Managers</h2>
+    <h2>🛠️ AI &amp; Developer Tools</h2>
     {% if notes.section_1_status == 'normal' and tools %}
         {% for item in tools %}
         <div class="item">
@@ -112,7 +112,7 @@
     {% endif %}
 
     <!-- Section 3: India Startup News -->
-    <h2>🇮🇳 India Startup & Company News</h2>
+    <h2>🇮🇳 India Tech &amp; Startups</h2>
     {% if notes.section_3_status == 'normal' and india_news %}
         {% for item in india_news %}
         <div class="item">

@@ -32,5 +32,6 @@ EVALUATOR_BACKUP = os.environ.get("EVALUATOR_BACKUP", "gemini-3.5-flash-lite")  
 MAX_STEPS = int(os.environ.get("AGENT_MAX_STEPS", "20"))
 MAX_ARTICLE_READS = 8
 MAX_SEARCHES = 3
+MAX_LOOKUPS = 4               # Edgepedia background lookups
 MAX_DRAFTS = 3
 LESSONS_KEPT = 15

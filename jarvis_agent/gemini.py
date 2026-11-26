@@ -1,6 +1,7 @@
 """Small Gemini REST client: plain JSON answers and function calling, with retry."""
 import json
 import os
+import threading
 import time
 
 import requests
@@ -12,6 +13,15 @@ class GeminiError(Exception):
     pass
 
 
+CALLS = []                      # every model call this process made: model, ms, ok, status (for monitoring)
+_lock = threading.Lock()
+
+
+def _record(model, started, status):
+    with _lock:
+        CALLS.append({"model": model, "ms": round((time.time() - started) * 1000), "ok": status == 200, "status": status})
+
+
 def _post(model, payload, tries=5):
     key = os.environ.get("GEMINI_API_KEY")
     if not key:
@@ -19,12 +29,15 @@ def _post(model, payload, tries=5):
     url = f"{BASE}/{model}:generateContent"
     wait = 8
     for attempt in range(tries):
+        started = time.time()
         try:
             # key in a header, never in the URL, so it can't appear in error messages
             resp = requests.post(url, headers={"x-goog-api-key": key}, json=payload, timeout=90)
         except requests.RequestException as e:
             last = f"network error: {type(e).__name__}"
+            _record(model, started, 0)
         else:
+            _record(model, started, resp.status_code)
             if resp.status_code == 200:
                 return resp.json()
             last = f"HTTP {resp.status_code}: {resp.text[:300]}"

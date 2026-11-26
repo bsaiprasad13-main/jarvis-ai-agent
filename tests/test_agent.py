@@ -7,6 +7,7 @@ import os
 import sys
 import tempfile
 import threading
+import time
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
@@ -17,7 +18,7 @@ from jarvis_agent.desks import GLOBAL, INDIA  # noqa: E402
 from jarvis_agent.store import Memory  # noqa: E402
 
 PASSED = []
-WHY = "This shows how a real team turned customer interviews into a roadmap, which is exactly what APM interviews ask about."
+WHY = "This shows how a small team shipped an on-device model that runs offline, which is a pattern worth copying for private apps."
 WEAK = "WEAK " + WHY
 
 
@@ -52,8 +53,23 @@ def install_fake_sources():
         status_code = 200
         text = "<html><p>" + "The team shipped a new roadmap feature after forty customer interviews. " * 10 + "</p></html>"
 
+    class FakeJson:
+        status_code = 200
+
+        def __init__(self, data):
+            self.data = data
+
+        def json(self):
+            return self.data
+
     class FakeSession:
-        def get(self, url, timeout=None):
+        def get(self, url, params=None, timeout=None):
+            if "edgepedia" in url:
+                q = (params or {}).get("q", "")
+                if q == "Nonexistent Thing":
+                    return FakeJson({"results": []})
+                return FakeJson({"results": [{"title": q, "url": f"https://www.edgepedia.org/{q.lower()}",
+                                              "excerpt": f"{q} is a company.", "confidence": 1}]})
             return FakeResp()
 
     fetchers.fetch_product_hunt, fetchers.fetch_hacker_news, fetchers.fetch_rss = ph, hn, rss
@@ -65,6 +81,7 @@ EVAL_CALLS = []
 
 def fake_ask_json(model, prompt, system=None, tries=5):
     EVAL_CALLS.append(model)
+    gemini._record(model, time.time(), 503 if FAKE_EVALUATOR_DOWN and model in EVALUATOR_MODELS else 200)
     if FAKE_EVALUATOR_DOWN and model in EVALUATOR_MODELS:
         raise gemini.GeminiError("HTTP 503 overloaded")
     score = 2 if "why: WEAK" in prompt else 4
@@ -77,6 +94,7 @@ SCRIPTS, LOCK = {}, threading.Lock()
 
 
 def fake_step(model, system, contents, decls, tries=5):
+    gemini._record(model, time.time(), 200)
     desk = "global" if "Global desk" in system else "india"
     role = "reserve" if "RESERVE writer" in system else "writer"
     with LOCK:
@@ -93,11 +111,12 @@ def fake_step(model, system, contents, decls, tries=5):
 def global_script(first_why=WEAK):
     draft = lambda why: {"tools": [{"item_id": "g1", "title": "NoteBot", "why_it_matters": why},
                                    {"item_id": "g2", "title": "Roadmapr", "why_it_matters": WHY}],
-                         "ai_news": [{"item_id": "g4", "title": "OpenAI round", "why_it_matters": WHY}],
+                         "ai_news": [{"item_id": "g4", "title": "OpenAI round", "why_it_matters": WHY,
+                                      "background": "https://www.edgepedia.org/openai"}],
                          "notes": {"tools": {"status": "normal", "message": ""}, "ai_news": {"status": "normal", "message": ""}}}
     return [
         [("fetch_source", {"name": n}) for n in GLOBAL.sources],
-        [("read_article", {"item_id": i}) for i in ("g1", "g2", "g4")],
+        [("read_article", {"item_id": i}) for i in ("g1", "g2", "g4")] + [("lookup_background", {"term": "OpenAI"})],
         [("submit_sections", draft(first_why))],
         [("submit_sections", draft(WHY))],
         [("save_lesson", {"lesson": "VentureBeat failed; search HN for AI news when it does."}), ("finish", {"summary": "ok"})],
@@ -158,6 +177,17 @@ r = tools.fetch_source(st2, "Product Hunt")
 check("already-sent stories are dropped by code", r["new_items"] == 1 and r["skipped_as_sent_or_duplicate"] == 1)
 check("failed source is reported to the agent", tools.fetch_source(st2, "VentureBeat")["ok"] is False)
 
+# --- 2b. Edgepedia background ------------------------------------------------
+bst = tools.RunState(new_memory(), evaluator.review, GLOBAL, model=DESK_MODEL)
+for n in GLOBAL.sources:
+    tools.fetch_source(bst, n)
+lb = tools.lookup_background(bst, "OpenAI")
+check("Edgepedia lookup returns a background url", lb["ok"] and lb["background_url"] == "https://www.edgepedia.org/openai")
+check("no confident match means no background", tools.lookup_background(bst, "Nonexistent Thing")["ok"] is False)
+bad = evaluator.check_rules(bst, {"tools": [], "ai_news": [{"item_id": "g4", "title": "x", "why_it_matters": WHY,
+                                                            "background": "https://made-up.example/x"}], "notes": {}})
+check("invented background link is rejected", any("background must be" in e for e in bad))
+
 # --- 3. done-check: the agent can't declare victory early -------------------
 fresh = tools.RunState(new_memory(), evaluator.review, INDIA)
 res = tools.finish(fresh, "done")
@@ -180,6 +210,10 @@ check("evaluator ran on a different model from the desks",
 check("links come from fetched items, not the model",
       sorted(urls) == sorted(["https://ph.example/notebot", "https://ph.example/roadmapr", "https://techcrunch.example/a",
                               "https://yourstory.example/a", "https://inc42.example/a"]))
+check("background from Edgepedia reaches the email rows",
+      email["section_2_ai_news"][0]["background"]["url"] == "https://www.edgepedia.org/openai")
+check("every model call is timed for monitoring", len(trace["model_calls"]) >= 4
+      and all({"model", "ms", "ok"} <= set(c) for c in trace["model_calls"]))
 check("final checks ran on the whole digest", {c["check"] for c in report.checks} >= {
       "No story appears twice", "Every link was fetched today", "Every section is filled or honestly explained"})
 
@@ -210,6 +244,14 @@ email, urls, trace, report = harness.run(new_memory(), log=quiet)
 check("old pipeline covers only the failed desk",
       trace["desks"][1]["written_by"] == "pipeline" and trace["desks"][0]["written_by"] == "writer"
       and email["section_3_india_news"][0]["title"] == "Old pipeline pick")
+
+# --- 7b. fault injection: a writer crashes on purpose -> reserve -----------
+os.environ["JARVIS_FAULT"] = "global:writer"
+SCRIPTS.update({("global", "reserve"): global_script(first_why=WHY), ("india", "writer"): india_script()})
+email, urls, trace, report = harness.run(new_memory(), log=quiet)
+del os.environ["JARVIS_FAULT"]
+check("injected fault is recovered by the reserve and labelled",
+      trace["desks"][0]["written_by"] == "reserve" and trace["fault_injected"] == "global:writer" and report.passed)
 
 # --- 8. evaluator down -> backup used and flagged as not independent --------
 FAKE_EVALUATOR_DOWN = True

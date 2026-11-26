@@ -1,0 +1,38 @@
+{
+  "name": "Jarvis",
+  "brief_title": "Jarvis: Your Daily AI Brief",
+  "reader": "an engineer who builds with AI and wants to stay ahead: new tools worth trying, shifts in models and platforms (including open, local and on-device models), and moves in India's tech and startup scene",
+  "test_question": "Would this genuinely help this engineer build something better or make a better call this week?",
+  "sections": {
+    "tools": {
+      "title": "AI & developer tools",
+      "brief": "New AI and developer tools and open-source projects worth trying: agents, coding tools, model tooling, local and on-device AI, automation."
+    },
+    "ai_news": {
+      "title": "AI industry news",
+      "brief": "Model releases, platform changes, funding, acquisitions, shutdowns and research that change how AI gets built and deployed."
+    },
+    "india_news": {
+      "title": "India tech & startups",
+      "brief": "Funding, launches, leadership changes, policy and big moves by Indian tech companies and startups."
+    }
+  },
+  "desks": [
+    {
+      "key": "global",
+      "title": "Global desk",
+      "prefix": "g",
+      "sources": ["Product Hunt", "Hacker News", "TechCrunch", "VentureBeat"],
+      "sections": ["tools", "ai_news"],
+      "min_read": 3
+    },
+    {
+      "key": "india",
+      "title": "India desk",
+      "prefix": "i",
+      "sources": ["YourStory", "Inc42", "Business Standard Technology"],
+      "sections": ["india_news"],
+      "min_read": 2
+    }
+  ]
+}

@@ -11,7 +11,9 @@ something fails" were a model, its own failure would go unnoticed.
 import time
 from concurrent.futures import ThreadPoolExecutor
 
-from . import fetchers, legacy
+import os
+
+from . import fetchers, gemini, legacy
 from .agent import run_desk
 from .config import DESK_MODEL, RESERVE_MODELS
 from .desks import DESKS, SECTION_TITLES
@@ -75,7 +77,9 @@ def _rows_from_state(state, digest):
             if item:
                 rows[k].append({"title": e.get("title") or item["title"], "source": item["source"], "link": item["url"],
                                 "why_it_matters": e.get("why_it_matters", ""), "item_id": item["id"],
-                                "read": bool(item.get("article"))})
+                                "read": bool(item.get("article")),
+                                "background": ({"title": state.lookups[e["background"]]["title"], "url": e["background"],
+                                                "source": "Edgepedia"} if e.get("background") in state.lookups else None)})
     return rows
 
 
@@ -112,6 +116,7 @@ def run_desk_with_backups(desk, memory, report, log):
 def run(memory, log=print):
     """Returns (email_data, sent_urls, trace). Raises only if no section could be produced at all."""
     report, started = ReportCard(), time.time()
+    gemini.CALLS.clear()
     with ThreadPoolExecutor(max_workers=len(DESKS)) as pool:            # desks work in parallel
         outcomes = list(pool.map(lambda d: run_desk_with_backups(d, memory, report, log), DESKS))
 
@@ -143,7 +148,8 @@ def run(memory, log=print):
         raise RuntimeError("no section could be produced")
 
     trace = {"seconds": round(time.time() - started), "desks": [_desk_trace(oc) for oc in outcomes],
-             "report_card": report.checks, "models": {"desk": DESK_MODEL, "reserve": RESERVE_MODELS}}
+             "report_card": report.checks, "models": {"desk": DESK_MODEL, "reserve": RESERVE_MODELS},
+             "model_calls": list(gemini.CALLS), "fault_injected": os.environ.get("JARVIS_FAULT") or None}
     return email, urls, trace, report
 
 
@@ -154,7 +160,8 @@ def _desk_trace(oc):
                 "error": s.error, "steps": s.steps, "seconds": s.seconds,
                 "sources": s.sources, "stories_considered": len(s.items),
                 "read": {i: s.items[i]["title"] for i in s.reads if i in s.items and s.items[i].get("article")},
-                "searches": s.searches, "finish_refusals": s.finish_refusals, "lessons": s.lessons, "summary": s.summary,
+                "searches": s.searches, "lookups": [{"term": v["term"], "title": v["title"], "url": u} for u, v in s.lookups.items()],
+                "finish_refusals": s.finish_refusals, "lessons": s.lessons, "summary": s.summary,
                 "drafts": [{"score": d["review"]["score"], "accepted": d["review"]["accepted"],
                             "rubric": d["review"]["rubric"], "rule_errors": d["review"]["rule_errors"],
                             "issues": d["review"]["issues"], "evaluator_model": d["review"]["evaluator_model"],

@@ -54,11 +54,11 @@ def render_email_html(generated_data, trace=None):
     <body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,sans-serif; background:#f9fafb; padding:24px; color:#111827;">
         <div style="max-width:600px; margin:0 auto;">
             <div style="text-align:center; padding-bottom:20px;">
-                <h1 style="margin:0; font-size:24px; color:#111827;">🤖 Jarvis: Your Daily PM Digest</h1>
-                <p style="margin:4px 0 0 0; font-size:14px; color:#6b7280;">AI & Tech curated for your product management journey</p>
+                <h1 style="margin:0; font-size:24px; color:#111827;">🤖 Jarvis: Your Daily AI Brief</h1>
+                <p style="margin:4px 0 0 0; font-size:14px; color:#6b7280;">AI tools, AI news and India tech, picked and checked by agents</p>
             </div>
             
-            <h2 style="font-size:18px; color:#2563eb; border-bottom:2px solid #e5e7eb; padding-bottom:6px; margin-top:24px;">🛠️ AI Tools for Product Managers</h2>
+            <h2 style="font-size:18px; color:#2563eb; border-bottom:2px solid #e5e7eb; padding-bottom:6px; margin-top:24px;">🛠️ AI & Developer Tools</h2>
             {build_cards(tools) if tools else f'<p style="color:#6b7280; font-size:14px;">{{notes.get("section_1_message") or "Today was quiet for new tool releases."}}</p>'}
 
             <h2 style="font-size:18px; color:#2563eb; border-bottom:2px solid #e5e7eb; padding-bottom:6px; margin-top:24px;">📰 AI Industry News</h2>
@@ -97,7 +97,7 @@ def send_daily_digest(generated_data, trace=None):
         "from": from_email,
         "to": [to_email],
         "reply_to": to_email,
-        "subject": f"Jarvis: Your Daily PM Digest - {date_str}",
+        "subject": f"Jarvis: Your Daily AI Brief - {date_str}",
         "html": html_content
     }
     
