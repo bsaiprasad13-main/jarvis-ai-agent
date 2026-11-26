@@ -19,7 +19,7 @@ from .config import DESK_MODEL, RESERVE_MODELS
 from .desks import DESKS, SECTION_TITLES
 from .tools import DIGEST_KEYS, LEGACY_SECTION, SOURCES, done_check
 
-EMAIL_KEYS = {"tools": "section_1_tools", "ai_news": "section_2_ai_news", "india_news": "section_3_india_news"}
+SECTION_KEYS = {"tools": "section_1_tools", "ai_news": "section_2_ai_news", "india_news": "section_3_india_news"}
 
 
 class ReportCard:
@@ -60,7 +60,7 @@ def _legacy_for_desk(desk, memory, state, deadline=None):
         return None
     out = {"notes": {}, "fetched": fetched if not (state and state.items) else []}
     for k in desk.sections:
-        out[k] = data.get(EMAIL_KEYS[k], [])
+        out[k] = data.get(SECTION_KEYS[k], [])
         n = LEGACY_SECTION[k][-1]
         out["notes"][k] = {"status": data.get("section_notes", {}).get(f"section_{n}_status", "normal"),
                            "message": data.get("section_notes", {}).get(f"section_{n}_message", "")}
@@ -135,7 +135,7 @@ def run(memory, log=print, deadline=None):
     email, all_rows = {"section_notes": {}}, []
     for oc in outcomes:
         for k in oc["desk"].sections:
-            email[EMAIL_KEYS[k]] = oc["rows"][k]
+            email[SECTION_KEYS[k]] = oc["rows"][k]
             all_rows += oc["rows"][k]
             n = LEGACY_SECTION[k][-1]
             note = oc["notes"].get(k) or {}
@@ -148,9 +148,9 @@ def run(memory, log=print, deadline=None):
     fetched |= {u for oc in outcomes for u in oc.get("fetched", [])}
     urls = [r["link"] for r in all_rows if r.get("link")]
     report.add("Every section is filled or honestly explained",
-               all(email.get(EMAIL_KEYS[k]) or email["section_notes"].get(f"section_{LEGACY_SECTION[k][-1]}_message")
+               all(email.get(SECTION_KEYS[k]) or email["section_notes"].get(f"section_{LEGACY_SECTION[k][-1]}_message")
                    for k in DIGEST_KEYS),
-               {SECTION_TITLES[k]: len(email.get(EMAIL_KEYS[k], [])) for k in DIGEST_KEYS})
+               {SECTION_TITLES[k]: len(email.get(SECTION_KEYS[k], [])) for k in DIGEST_KEYS})
     report.add("No story appears twice", len(urls) == len(set(urls)), f"{len(urls)} links, {len(set(urls))} unique")
     report.add("Every link came from today's feeds", all(u in fetched for u in urls),
                f"{sum(u in fetched for u in urls)}/{len(urls)} links found in today's fetched stories")

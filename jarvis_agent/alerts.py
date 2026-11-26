@@ -10,7 +10,6 @@ operation and is visible on the website's report card instead.
 Uses Resend. Needs RESEND_API_KEY, ALERT_TO_EMAIL and ALERT_FROM_EMAIL (falls back to TO_EMAIL /
 FROM_EMAIL). If they're missing, the alert is only logged.
 """
-import datetime
 import os
 
 import requests
@@ -103,6 +102,3 @@ def send(status, reasons, report_checks, trace, error, run_id, log=print):
         f"Check ALERT_FROM_EMAIL uses your verified Resend domain and RESEND_API_KEY can send.\n{body}")
     return False
 
-
-def stamp():
-    return datetime.datetime.now().strftime("%Y-%m-%d_%H%M")

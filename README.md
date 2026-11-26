@@ -4,7 +4,7 @@
 Two AI agents research and write, a different AI model reviews their drafts, and plain code decides when the work is
 really done. Nothing reaches the website until it passes every check.
 
-[**Live site**](https://bsaiprasad13-main.github.io/jarvis-ai-agent/) · Runs on **Zoho Catalyst**, scheduled daily at 10:00 IST (live since 26 Nov 2026) · **62 offline tests** · MIT license
+[**Live site**](https://bsaiprasad13-main.github.io/jarvis-ai-agent/) · Runs daily at 10:00 IST on **Zoho Catalyst** · **66 offline tests** · MIT license
 
 ![The Jarvis website: today's report with its checks, and the Ask Jarvis panel](docs/site.png)
 
@@ -14,7 +14,7 @@ really done. Nothing reaches the website until it passes every check.
 |---|---|
 | **What it does** | Reads 7 sources (Product Hunt, Hacker News, TechCrunch, VentureBeat, YourStory, Inc42, Business Standard) and writes three short sections for an engineer who builds with AI: **AI & developer tools**, **AI industry news**, **India tech & startups**. Each pick gets one or two plain lines on why it matters. |
 | **The hard part it solves** | AI agents sound confident, say they're done when they aren't, and quietly make things up. Jarvis is built so it can't publish unchecked work, and when something breaks it recovers or says exactly where it broke. |
-| **Ask Jarvis** | A chat on the website that answers questions from the reports only, with sources. Retrieval runs in the browser; optionally a 1.5B model (WebLLM) writes the answer on the visitor's own device, and code rejects any answer that doesn't cite a real story. |
+| **Ask Jarvis** | A chat on the website that answers from the reports only, with sources, and remembers the conversation ("tell me more about the second one"). Retrieval runs in the browser; optionally a 1.5B model (WebLLM, on WebGPU) writes the answer on the visitor's own device, and code rejects any answer that doesn't cite a real story. |
 
 ### How it maps to building conversational AI
 
@@ -22,13 +22,12 @@ really done. Nothing reaches the website until it passes every check.
 |---|---|
 | **Agents, function calling, tools** | Two Gemini desk agents with 7 tools each decide what to fetch, read, look up and submit (`jarvis_agent/agent.py`, `tools.py`) |
 | **Prompt engineering and context management** | System prompts and the checker's rubric are built from one spec (`jarvis.config.json`); the checker is told exactly which sections each desk owns; lessons carry over to the next day |
-| **RAG and reducing hallucinations** | Desks must read the article before explaining it; models see story IDs, never URLs, so links can't be invented; background comes from a real Edgepedia lookup; the chat answers only from retrieved stories and must cite them |
+| **RAG and reducing hallucinations** | Desks must read the article before explaining it; agent writers see story IDs, never URLs, so they can't invent links; background comes from a real lookup in Edgepedia (a free encyclopedia API); the chat answers only from retrieved stories and must cite them |
 | **Edge-case handling** | Early "finish", crashes, half-done work, model outages and quota limits each have a fixed route in code, and each has a test |
 | **End-to-end deployment** | Spec → prompts and tools → offline tests → test runs with fault injection → production on Zoho Catalyst → alerts and a 10:30 watchdog |
 | **Integrations** | Gemini, Product Hunt GraphQL, Hacker News API, RSS feeds, Edgepedia API, Resend email, Zoho Catalyst (Job Scheduling, Stratus), GitHub Pages |
 | **Tuning from logs and latency** | Every model call is timed and logged with its report; each fix in section 5 came from reading run traces |
-| **Low-latency, on-device inference** | The optional chat model runs in the browser on WebGPU and shows time to first word |
-| **UX writing** | One plain line per story, a one-page site, and alert emails that say what broke in plain English |
+| **On-device inference** | The optional chat model runs in the visitor's browser on WebGPU and reports time to first word |
 
 ## 1. How it works
 
@@ -69,7 +68,7 @@ Every rule below is enforced in code, not by asking the model nicely.
 
 - **The agent can't decide it's done.** `finish` is refused until code confirms the desk's contract: every source tried, enough articles actually read (a page that failed to load doesn't count), every section filled (or honestly marked quiet when there really is little news), and the checker's approval. The refusal lists exactly what's missing.
 - **The writer never grades itself.** The checker runs on a different model. If every independent model is unavailable, it falls back to the writer's model, and the report says so openly.
-- **It can't invent links.** Models only see story IDs like `g14`; code maps them back to the addresses that came from that morning's feeds, and a final check confirms every published link is one of them. Background links must come from a real Edgepedia lookup.
+- **It can't invent links.** Agent writers only see story IDs like `g14`; code maps them back to the addresses that came from that morning's feeds, and a final check confirms every published link is one of them. Background links must come from a real Edgepedia lookup. (The last-resort fallback pipeline sees URLs, so the same final check covers it.)
 - **Failures follow fixed routes, decided by code.** A writer that crashes, runs out of steps or stops half way is replaced by a backup model, then another, then the original one-call pipeline for that desk only. If the thing deciding what to do after a failure were itself a model, its own failure would go unnoticed.
 - **It always finishes inside Catalyst's 15-minute job limit.** Writers get 5 minutes, backups 2.5 each, model retries stop when time is up, and time is always kept back for the fallback, publishing and the alert.
 - **Nothing counts as published until it's read back.** After saving the report, the job reads it from Stratus and compares the links.
@@ -77,14 +76,16 @@ Every rule below is enforced in code, not by asking the model nicely.
 
 ## 3. How it was tested
 
-- **62 offline checks** (`python tests/test_agent.py`, with fake models and fake sources, run on every push). They cover:
+- **66 offline checks** (`python tests/test_agent.py`, with fake models and fake sources, run on every push together with the `ruff` linter). They cover:
   - a desk calling `finish` early, crashing, or stopping half done
   - every agent writer failing
   - the checker going down or returning broken JSON (this never costs the writer a draft)
   - weak grounding, invented IDs and background links
   - desks staying inside their contract, and a failed page read not counting as read
   - feed parsing (RSS and Atom) and duplicate detection
-  - the time budget
+  - the time budget (writers skipped when time is short, the fallback still delivers)
+  - lessons with links or "ignore previous" text are refused, so web text can't become tomorrow's instructions
+  - no secrets in the committed Catalyst config
   - the alert rules
   - the **Catalyst Job function end to end**, with a fake SDK and an in-memory bucket: clean run, degraded run, and crash
 - **Real runs with real models and sources**, including **fault injection** (`fault=india:writer`). In one test the India writer was crashed on purpose, both backup models then genuinely hit their quota (HTTP 429), and the original pipeline wrote the section. All final checks still passed.
@@ -103,7 +104,7 @@ Every rule below is enforced in code, not by asking the model nicely.
 
 | Version | What changed | Why |
 |---|---|---|
-| v1 (Sep 2026, separate repo) | One-call pipeline on Catalyst: fetch, one Gemini call, email at 10:00. Ran daily. This repo starts at v2. | It worked, but it wrote from headlines, repeated stories (5 repeats in 3 days despite a no-repeat rule), and nothing noticed a wrong answer. |
+| v1 (separate repo) | One-call pipeline on Catalyst: fetch, one Gemini call, email at 10:00. Ran daily. This repo starts at v2. | It worked, but it wrote from headlines, repeated stories (5 repeats in 3 days despite a no-repeat rule), and nothing noticed a wrong answer. |
 | v2 | One agent with tools, plus a checker model. | Give the model choices (what to read) and an independent check. |
 | v3 | Two desk agents, a harness with contracts and fallbacks, a report card. | Specialised, parallel work, and code (not the model) decides when it's done. |
 | v4 | Spec file, Edgepedia background, per-call timing. | Make it configurable, grounded and observable. |
@@ -141,14 +142,15 @@ Fixes found by reading real run logs, each covered by a test:
 - **One model provider.** Writers and checker are different Gemini models, so they're independent of each other's mistakes but not of a Gemini-wide outage. If every desk model fails, the original pipeline still writes the brief, on Gemini too. A second provider is the next step.
 - **The checker sees excerpts, not whole articles,** to keep each review fast and cheap.
 - **Some feeds go through a relay.** When a site blocks direct feed requests, the fetcher retries through the public rss2json service.
-- **Short history.** The agent version went live on 26 Nov 2026; the earlier days on the site come from v1 and show headlines only.
+- **Earlier days on the site come from v1**, so they show headlines only.
 - **Catalyst Development environment.** The job and bucket run in Catalyst's Development environment, which is enough for one scheduled job a day.
 
 ## 8. Run it yourself
 
 ```
 pip install -r requirements.txt
-python tests/test_agent.py               # 62 offline checks
+python tests/test_agent.py               # 66 offline checks
+ruff check .                             # lint (settings in ruff.toml)
 copy .env.example .env                   # GEMINI_API_KEY, PRODUCT_HUNT_DEVELOPER_TOKEN
 python run.py --test-run                 # a real run (uses API quota); report saved to runs/
 ```
@@ -195,4 +197,4 @@ Environment variables:
 | `run.py` | One run: harness → publish and read back → memory → alert |
 | `scripts/build_catalyst.py` | Builds the Catalyst function folder |
 | `site/index.html` | The website and the Ask Jarvis chat |
-| `tests/test_agent.py` | The 62 offline checks |
+| `tests/test_agent.py` | The 66 offline checks |

@@ -1,0 +1,6 @@
+# Lint settings used by CI (`ruff check .`): real errors and unused code, not style preferences.
+extend-exclude = ["functions/jarvis_agent/jarvis_agent", "functions/jarvis_agent/run.py"]
+
+[lint]
+select = ["E", "F", "W"]
+ignore = ["E501"]   # long lines are allowed

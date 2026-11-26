@@ -76,7 +76,7 @@ class Memory:
     # --- lessons the agent writes for its future self -------------------
     def lessons(self, desk=None):
         """Lessons for one desk (plus any not tied to a desk), oldest first."""
-        return [l for l in self.data["lessons"] if desk is None or l.get("desk") in (None, desk)]
+        return [x for x in self.data["lessons"] if desk is None or x.get("desk") in (None, desk)]
 
     def add_lesson(self, text, desk=None):
         text = " ".join(str(text).split())[:300]

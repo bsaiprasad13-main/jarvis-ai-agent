@@ -75,7 +75,7 @@ def main():
         ok = "DEPLOYMENT SUCCESSFUL" in out
         print("Deploy:", "successful" if ok else "FAILED")
         if not ok:
-            print("\n".join(l for l in out.splitlines() if "rror" in l)[:2000])
+            print("\n".join(line for line in out.splitlines() if "rror" in line)[:2000])
             sys.exit(1)
     finally:
         with open(CONFIG, "w", encoding="utf-8", newline="") as f:     # never leave secrets in the repo folder

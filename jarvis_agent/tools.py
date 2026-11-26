@@ -161,11 +161,12 @@ def _page_text(raw_html):
 
 def read_picks(state, picks):
     """Picks that count as read in full: the page was actually fetched and had text.
-    A failed read (404, paywall, empty page) does not count, unless the desk has used every read it is
-    allowed: then it did all it could, so attempts count too."""
-    if len(state.reads) >= MAX_ARTICLE_READS:
+    A failed read (404, paywall, empty page) does not count. One exception: if the desk has used every read it
+    is allowed and at least one pick really was read, its other attempts count too (it did all it could)."""
+    read = [i for i in picks if state.items.get(i, {}).get("article")]
+    if read and len(state.reads) >= MAX_ARTICLE_READS:
         return [i for i in picks if i in state.reads]
-    return [i for i in picks if state.items.get(i, {}).get("article")]
+    return read
 
 
 def read_article(state, item_id):
@@ -257,7 +258,6 @@ def submit_sections(state, notes=None, **sections):
         return {"error": "draft limit reached. Call finish."}
     review = state.evaluator(state, digest)
     if review.get("unavailable"):                        # infrastructure problem, not the writer's fault: no draft used
-        state.evaluator_outages = getattr(state, "evaluator_outages", 0) + 1
         return {"accepted": False, "evaluator_unavailable": True, "rule_errors": review["rule_errors"],
                 "next": "The evaluator is temporarily unavailable. This did not use up a draft. Fix any rule_errors, "
                         "then call submit_sections again."}
@@ -274,10 +274,16 @@ def submit_sections(state, notes=None, **sections):
             if left else "No drafts left. Call finish."}
 
 
+SUSPICIOUS_LESSON = re.compile(r"https?://|www\.|ignore (all |any |previous |prior )|disregard|system prompt", re.I)
+
+
 def save_lesson(state, lesson):
     if len(state.lessons) >= LESSONS_PER_RUN:
         return {"error": "lesson limit for this run reached"}
-    state.lessons.append(" ".join(str(lesson).split())[:300])
+    lesson = " ".join(str(lesson).split())[:300]
+    if SUSPICIOUS_LESSON.search(lesson):          # web text must not turn into tomorrow's instructions
+        return {"error": "lessons can't contain links or instructions to ignore rules. Describe what you learned."}
+    state.lessons.append(lesson)
     return {"ok": True}
 
 

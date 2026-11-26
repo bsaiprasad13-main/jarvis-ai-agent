@@ -4,13 +4,9 @@ One Gemini call over the fetched headlines writes all sections at once. No
 reading, no review. The harness uses it only when every agent writer on a desk
 has failed. It reads the same agent spec (jarvis.config.json) as the desks.
 """
-import json
-
-import requests
-
+from . import gemini
+from .config import DESK_MODEL, RESERVE_MODELS
 from .desks import READER, SECTION_BRIEFS, SECTION_TITLES, TEST_QUESTION
-
-MODEL = "gemini-3.5-flash-lite"
 
 
 def construct_prompt(items, failed_sources):
@@ -50,24 +46,13 @@ ITEMS:
 """
 
 
-def write_brief(items, failed_sources):
-    import os
-    api_key = os.environ.get("GEMINI_API_KEY")
-    if not api_key:
-        print("Error: GEMINI_API_KEY not set.")
-        return None
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/{MODEL}:generateContent"
-    payload = {"contents": [{"parts": [{"text": construct_prompt(items, failed_sources)}]}],
-               "generationConfig": {"responseMimeType": "application/json"}}
-    try:
-        response = requests.post(url, headers={"x-goog-api-key": api_key}, json=payload, timeout=60)
-        if response.status_code != 200:
-            print(f"Gemini API Error ({response.status_code}): {response.text[:300]}")
-            return None
-        text = response.json()['candidates'][0]['content']['parts'][0]['text'].strip()
-        if text.startswith("```"):
-            text = text.strip("`").removeprefix("json").strip()
-        return json.loads(text)
-    except Exception as e:
-        print(f"Error calling Gemini REST API: {type(e).__name__}")
-        return None
+def write_brief(items, failed_sources, log=print):
+    """One JSON call over the headlines. Tries the desk model, then each reserve model.
+    Goes through gemini.py, so the call is timed and retried like every other model call."""
+    prompt = construct_prompt(items, failed_sources)
+    for model in [DESK_MODEL] + [m for m in RESERVE_MODELS if m != DESK_MODEL]:
+        try:
+            return gemini.ask_json(model, prompt, tries=2)
+        except (gemini.GeminiError, ValueError) as e:
+            log(f"  old pipeline: {model} failed ({str(e)[:120]})")
+    return None

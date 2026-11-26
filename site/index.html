@@ -392,6 +392,23 @@ footer a { color: var(--muted); }
   const words = (t) => String(t || "").toLowerCase().split(/[^a-z0-9.+#]+/).filter((w) => w.length > 1 && !STOP.has(w)).map(stem).map((w) => SAME[w] || w);
   const TOPIC = { section_1_tools: "tool developer coding", section_2_ai_news: "ai industry news", section_3_india_news: "india startup" };
   let corpus = null, df = {}, avgLen = 1, engine = null, busy = false;
+  // conversation memory: the last answers, so follow-ups like "tell me more about the second one" work
+  const history = [];
+  let lastHits = [];
+  const ORDINALS = { first: 0, "1st": 0, second: 1, "2nd": 1, third: 2, "3rd": 2, fourth: 3, "4th": 3, last: -1 };
+  function findStories(q) {
+    const ord = (q.toLowerCase().match(/\b(first|1st|second|2nd|third|3rd|fourth|4th|last)\b/) || [])[1];
+    if (ord && lastHits.length) {                                   // "the second one" points at the last answer
+      const i = ORDINALS[ord] < 0 ? lastHits.length - 1 : ORDINALS[ord];
+      if (lastHits[i]) return [lastHits[i]];
+    }
+    let hits = search(q);
+    if (history.length && words(q).length < 3) {                     // a short follow-up keeps the earlier topic
+      const withTopic = search(`${history[history.length - 1].q} ${q}`);
+      if (withTopic.length) hits = withTopic;
+    }
+    return hits;
+  }
 
   async function buildCorpus() {
     if (corpus || !days.length) return;               // wait until the reports list has loaded
@@ -434,11 +451,12 @@ footer a { color: var(--muted); }
     say(esc(q), true);
     $("q").value = "";
     await buildCorpus();
-    const hits = corpus ? search(q) : [];
+    const hits = corpus ? findStories(q) : [];
     if (!hits.length) {
       say("The reports don't cover that. Try a company, a tool or a topic from the stories on this page.");
     } else if (!engine) {
-      say(`Here's what the reports say:${sourcesHtml(hits, true)}`);
+      say(`${hits.length === 1 ? "Here's that story:" : "Here's what the reports say:"}${sourcesHtml(hits, true)}`);
+      history.push({ q, a: hits.map((d) => d.title).join("; ") });
     } else {
       const el = say("…");
       const ctx = hits.map((d, i) => `[${i + 1}] (${d.when}, ${d.source}) ${d.title}${d.why ? " — " + d.why.slice(0, 220) : ""}`).join("\n");
@@ -447,6 +465,7 @@ footer a { color: var(--muted); }
       try {
         const stream = await engine.chat.completions.create({ stream: true, temperature: 0.2, max_tokens: 200, messages: [
           { role: "system", content: "You answer questions about Jarvis's daily AI reports. Use ONLY the numbered stories. Cite each fact with its number in square brackets, like [2]. If the stories don't answer the question, reply exactly: NOT_IN_REPORTS. Two or three short, plain sentences." },
+          ...history.slice(-2).flatMap((h) => [{ role: "user", content: h.q }, { role: "assistant", content: h.a }]),
           { role: "user", content: `Stories:\n${ctx}\n\nQuestion: ${q}` }] });
         for await (const part of stream) {
           const delta = part.choices?.[0]?.delta?.content || "";
@@ -466,7 +485,10 @@ footer a { color: var(--muted); }
         note = `Every citation points to a story below · first word in ${Math.round((first || performance.now()) - t0)} ms, on your device.`;
       }
       el.innerHTML = `${answer}${sourcesHtml(hits, false)}<span class="check">${esc(note)}</span>`;
+      history.push({ q, a: text.replace(/\[\d+\]/g, "").trim().slice(0, 400) || hits.map((d) => d.title).join("; ") });
     }
+    if (hits.length > 1) lastHits = hits;
+    if (history.length > 6) history.shift();
     busy = false;
   }
 
