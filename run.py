@@ -27,6 +27,7 @@ from jarvis_agent.storage import LocalStorage  # noqa: E402
 from jarvis_agent.store import Memory  # noqa: E402
 
 SECTION_KEYS = ("section_1_tools", "section_2_ai_news", "section_3_india_news")
+IST = datetime.timezone(datetime.timedelta(hours=5, minutes=30))     # run ids are India time, wherever the code runs
 
 
 def publish_report(store, prefix, file_prefix, stamp, brief, trace, mode):
@@ -35,7 +36,7 @@ def publish_report(store, prefix, file_prefix, stamp, brief, trace, mode):
     store.write_text(f"{prefix}{stamp}.json", json.dumps(record, ensure_ascii=False, indent=1, default=str))
     index = json.loads(store.read_text(f"{prefix}index.json") or "[]")
     index = [r for r in index if r["id"] != stamp] + [{
-        "id": stamp, "kind": "agent", "mode": mode, "file": f"{file_prefix}{stamp}.json",
+        "id": stamp, "tz": "IST", "kind": "agent", "mode": mode, "file": f"{file_prefix}{stamp}.json",
         "stories": sum(len(brief.get(k, [])) for k in SECTION_KEYS),
         "checks_passed": sum(c["passed"] for c in trace["report_card"] if c.get("final", True)),
         "checks": sum(1 for c in trace["report_card"] if c.get("final", True)),
@@ -47,7 +48,7 @@ def publish_report(store, prefix, file_prefix, stamp, brief, trace, mode):
 
 def run_once(memory, store, prefix, file_prefix, mode, save_memory, deadline=None, log=print):
     """One full run. Returns (status, reasons, report_checks, trace, error)."""
-    stamp = datetime.datetime.now().strftime("%Y-%m-%d_%H%M")
+    stamp = datetime.datetime.now(IST).strftime("%Y-%m-%d_%H%M")
     report_checks, trace, error = [], None, None
     log(f"=== Jarvis run {stamp} ({mode}) ===")
     try:

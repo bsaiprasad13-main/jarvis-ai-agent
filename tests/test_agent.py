@@ -404,6 +404,11 @@ fake_sdk.initialize = lambda req=None: (_ for _ in ()).throw(RuntimeError("Strat
 ctx3 = FakeContext()
 catalyst_main.handler(types.SimpleNamespace(get_all_job_params=lambda: {}), ctx3)
 check("a Catalyst crash alerts as failed and marks the job failed", sent_alerts[-1] == "failed" and ctx3.result == "failure")
+ctx4 = FakeContext()
+fake_sdk.initialize = lambda req=None: types.SimpleNamespace(stratus=lambda: types.SimpleNamespace(bucket=lambda name: FakeBucket()))
+catalyst_main.handler(types.SimpleNamespace(get_all_job_params=lambda: {"test_alert": "1"}), ctx4)
+check("test_alert only sends a test alert and runs nothing", sent_alerts[-1] == "failed" and len(sent_alerts) == 3)
+check("run ids are India time and marked so", idx[-1].get("tz") == "IST")
 alerts.send = real_send
 
 # --- 10. memory --------------------------------------------------------------

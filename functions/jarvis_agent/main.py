@@ -2,7 +2,10 @@
 
 Reports and memory live in a Stratus bucket (JARVIS_BUCKET). The website reads reports/index.json from it.
 If the run fails or needs the backup pipeline, an alert email says where (see jarvis_agent/alerts.py).
-Job parameters (optional, e.g. for a test from the console): mode=test, fault=india:writer
+Job parameters (optional, for tests from the console):
+    mode=test           run and publish a report labelled "test", without changing memory
+    fault=india:writer  crash that writer on purpose to watch the recovery
+    test_alert=1        only send a test alert email (checks the Resend settings), no run
 """
 import logging
 import os
@@ -29,6 +32,11 @@ def handler(job_request, context):
         import run as runner
 
         params = job_request.get_all_job_params() or {}
+        if params.get("test_alert"):
+            sent = alerts.send("failed", ["This is a test alert sent from the Catalyst console (test_alert=1). "
+                                          "Nothing is wrong."], [], None, None, "test-alert", log=log)
+            status = "ok" if sent else "failed"
+            raise SystemExit
         if params.get("fault"):
             os.environ["JARVIS_FAULT"] = str(params["fault"])          # fault-injection test
         mode = "test" if params.get("mode") == "test" else "daily"
@@ -42,6 +50,8 @@ def handler(job_request, context):
             memory, store, "reports/", "", mode, save_memory=(mode == "daily"), deadline=deadline, log=log)
         if status != "ok":
             alerts.send(status, reasons, checks, trace, error, stamp, log=log)
+    except SystemExit:
+        pass
     except Exception:
         err = traceback.format_exc()
         logger.error(err)

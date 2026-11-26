@@ -70,7 +70,7 @@ Every rule below is enforced in code, not by asking the model nicely.
 
 ## 5. How it was tested
 
-- **50 offline checks** (`python tests/test_agent.py`, with fake models and fake sources, run on every push). They cover:
+- **52 offline checks** (`python tests/test_agent.py`, with fake models and fake sources, run on every push). They cover:
   - a desk calling `finish` early, crashing, or stopping half done
   - every agent writer failing
   - the checker going down or returning broken JSON (this never costs the writer a draft)
@@ -139,7 +139,7 @@ Fixes found by reading real run logs, each covered by a test:
 
 ```
 pip install -r requirements.txt
-python tests/test_agent.py               # 50 offline checks
+python tests/test_agent.py               # 52 offline checks
 copy .env.example .env                   # GEMINI_API_KEY, PRODUCT_HUNT_DEVELOPER_TOKEN
 python run.py --dry-run                  # a real run; report saved to site/data
 ```
@@ -156,6 +156,8 @@ In the Catalyst console:
 2. Create a Function job pool.
 3. Add the environment variables to `jarvis_agent`.
 4. Create a daily 10:00 IST cron that runs the job function.
+
+To check the alert email, submit one job with the parameter `test_alert=1`: it sends a test alert and runs nothing else. `mode=test` runs without touching memory; `fault=india:writer` crashes that writer on purpose to show the recovery.
 
 Environment variables:
 - **Needed:** `GEMINI_API_KEY`, `PRODUCT_HUNT_DEVELOPER_TOKEN`, `JARVIS_BUCKET`
@@ -178,4 +180,4 @@ Environment variables:
 | `run.py` | One run: harness → publish and read back → memory → alert |
 | `scripts/build_catalyst.py` | Builds the Catalyst function folder |
 | `site/index.html` | The website |
-| `tests/test_agent.py` | The 50 offline checks |
+| `tests/test_agent.py` | The 52 offline checks |
