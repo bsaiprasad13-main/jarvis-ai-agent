@@ -22,6 +22,8 @@ jobs:
     if: github.event_name != 'push'
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    env:
+      TZ: Asia/Kolkata           # run ids and dates in India time
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -60,4 +62,9 @@ jobs:
         with:
           path: site
       - id: deploy
+        continue-on-error: true    # GitHub sometimes can't see a just-uploaded artifact yet
+        uses: actions/deploy-pages@v4
+      - if: steps.deploy.outcome == 'failure'
+        run: sleep 30
+      - if: steps.deploy.outcome == 'failure'
         uses: actions/deploy-pages@v4
