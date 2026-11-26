@@ -8,10 +8,9 @@ something fails" were a model, its own failure would go unnoticed.
     India desk ──┘                        └─ fail ─> reserve (other model) ┤
                                                       └─ fail ─> old pipeline for that desk only
 """
+import os
 import time
 from concurrent.futures import ThreadPoolExecutor
-
-import os
 
 from . import fetchers, gemini, legacy
 from .agent import run_desk

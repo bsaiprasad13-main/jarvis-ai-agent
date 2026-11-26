@@ -2,7 +2,7 @@
 
 **A multi-agent AI system that writes a daily AI brief, checks its own work, and runs on its own every morning.**
 Two AI agents research and write, a different AI model reviews their drafts, and plain code decides when the work is
-really done. Nothing reaches the website until it passes every check.
+really done. Every report is published with its report card, and any failed check sends an alert saying where.
 
 [**Live site**](https://bsaiprasad13-main.github.io/jarvis-ai-agent/) · Runs daily at 10:00 IST on **Zoho Catalyst** · **73 offline tests** · **checker catches 13/13 invented details** ([measured](evals/); the original caught 4/13) · MIT license
 
@@ -56,7 +56,7 @@ really done. Nothing reaches the website until it passes every check.
 | Part | What it does | Where |
 |---|---|---|
 | **Desk agents** | Gemini with function calling and 7 tools. Each desk owns its own sources and sections and decides what to fetch, what to read in full, what to look up, and when its draft is ready. | `jarvis_agent/agent.py`, `tools.py` |
-| **Checker** | A *different* model in a fresh context scores each draft on grounded, specific, relevant, best picks and honest, with evidence, and returns exact fixes. It sees each pick with the full text the desk read (up to 2,500 characters per article). Grounding must score 4 or more out of 5, and it also lists every factual claim: if the article doesn't support one, **code** fails the draft's grounding. Checker calls use temperature 0. | `jarvis_agent/evaluator.py` |
+| **Checker** | A *different* model in a fresh context scores each draft on grounded, specific, relevant, best picks and honest, with evidence, and returns exact fixes. It sees each pick with the full text the desk read (up to 2,500 characters per article). Grounding must score 4 or more out of 5, and it also lists every factual claim: if it marks one as not supported by the article, **code** fails the draft's grounding (this relies on the model listing the claims, which the measured test checks). Checker calls use temperature 0. | `jarvis_agent/evaluator.py` |
 | **Harness** | Plain code. Gives each desk a contract, refuses `finish` until it's met, routes failures, enforces time budgets, and runs final checks. | `jarvis_agent/harness.py` |
 | **Memory** | Links already published (no repeats for 14 days), feed addresses that worked, and one lesson per desk per day, read at the start of the next run. | `jarvis_agent/store.py` (Stratus `state/memory.json`) |
 | **Agent spec** | Reader, sections and desks in one file. A new audience or new sources is a config change, not a code change. | `jarvis.config.json` |
@@ -84,7 +84,7 @@ Every rule below is enforced in code, not by asking the model nicely.
   - desks staying inside their contract, and a failed page read not counting as read
   - feed parsing (RSS and Atom) and duplicate detection
   - the time budget (writers skipped when time is short, the fallback still delivers)
-  - prompt injection: six attack phrasings in saved lessons are refused, and article text is fenced as data in the checker's prompt
+  - prompt injection: common attack phrasings in saved lessons are refused (a filter, not a guarantee; the rules a lesson might target are enforced in code anyway), and article text is fenced as data in the checker's prompt
   - checker replies with the wrong shape, `"supported": "false"` as a string, or `null` fields
   - a writer grading its own work shows up as a warning and a "degraded" alert
   - no secrets in the committed Catalyst config

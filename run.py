@@ -38,8 +38,9 @@ def publish_report(store, prefix, file_prefix, stamp, brief, trace, mode):
     index = [r for r in index if r["id"] != stamp] + [{
         "id": stamp, "tz": "IST", "kind": "agent", "mode": mode, "file": f"{file_prefix}{stamp}.json",
         "stories": sum(len(brief.get(k, [])) for k in SECTION_KEYS),
-        "checks_passed": sum(c["passed"] for c in trace["report_card"] if c.get("final", True)),
-        "checks": sum(1 for c in trace["report_card"] if c.get("final", True)),
+        "checks_passed": sum(c["passed"] for c in trace["report_card"] if c.get("final", True) and not c.get("warning")),
+        "checks": sum(1 for c in trace["report_card"] if c.get("final", True) and not c.get("warning")),
+        "warnings": sum(1 for c in trace["report_card"] if c.get("warning") and not c["passed"]),
         "recoveries": sum(1 for c in trace["report_card"] if not c.get("final", True) and not c["passed"])}]
     store.write_text(f"{prefix}index.json", json.dumps(sorted(index, key=lambda r: r["id"]), indent=1))
     back = json.loads(store.read_text(f"{prefix}{stamp}.json") or "{}")

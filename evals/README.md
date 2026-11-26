@@ -3,7 +3,7 @@
 Does the checker catch made-up details? Labelled drafts, real model calls.
 
 - [`checker_cases.json`](checker_cases.json): **20 main cases** (10 faithful, 10 that each add or change one detail the article doesn't support) and **6 held-out cases**: long articles with the key fact late in the text, written after the fix and never used to tune it. Companies are invented, so the model can't answer from memory.
-- [`checker_eval.py`](checker_eval.py): runs each case through the checker exactly like a production draft. `python evals/checker_eval.py after 3` runs every case 3 times.
+- [`checker_eval.py`](checker_eval.py): runs each case through the checker exactly like a production draft. To reproduce the numbers below: `EVALUATOR_MODELS=gemini-3.5-flash-lite python evals/checker_eval.py after 3` (without the setting, the checker tries the stronger production models first).
 
 **Same conditions for both:** `gemini-3.5-flash-lite` (the weakest model in the checker chain), temperature 0, 3 runs, same cases.
 
