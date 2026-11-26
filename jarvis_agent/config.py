@@ -4,6 +4,7 @@ import os
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_DIR = os.path.join(ROOT, "data")
 RUNS_DIR = os.path.join(ROOT, "runs")
+SITE_DATA_DIR = os.path.join(ROOT, "site", "data")
 
 try:
     from dotenv import load_dotenv
@@ -14,16 +15,16 @@ try:
 except ImportError:
     pass
 
-# Model used by the agent and by the critic. Same family as production.
-AGENT_MODEL = os.environ.get("AGENT_MODEL", "gemini-3.5-flash-lite")
-CRITIC_MODEL = os.environ.get("CRITIC_MODEL", AGENT_MODEL)
-# If the agent's model is overloaded, the run switches to this one and carries on.
-BACKUP_MODEL = os.environ.get("BACKUP_MODEL", "gemini-3.5-flash-lite")
+# Who does what. The evaluator and the reserve run on a different model from
+# the desks, so one model never grades its own work and one outage can't stop a run.
+DESK_MODEL = os.environ.get("DESK_MODEL", "gemini-3.5-flash-lite")
+RESERVE_MODEL = os.environ.get("RESERVE_MODEL", "gemini-3.5-flash")
+EVALUATOR_MODEL = os.environ.get("EVALUATOR_MODEL", "gemini-3.5-flash")
+EVALUATOR_BACKUP = os.environ.get("EVALUATOR_BACKUP", "gemini-3.5-flash-lite")   # used (and flagged) only if the evaluator is down
 
-# Guardrails: hard limits enforced in code, not by the AI.
-MAX_STEPS = int(os.environ.get("AGENT_MAX_STEPS", "30"))      # model calls in one run
-MAX_ARTICLE_READS = 12                                         # full articles per run
-MAX_SEARCHES = 4                                               # extra searches per run
-MAX_DRAFTS = 3                                                 # drafts the critic will review
-PASS_SCORE = 7                                                 # critic score (1-10) needed to accept
-LESSONS_KEPT = 15                                              # notes remembered across runs
+# Guardrails: hard limits enforced in code, not by the AI. Per desk.
+MAX_STEPS = int(os.environ.get("AGENT_MAX_STEPS", "20"))
+MAX_ARTICLE_READS = 8
+MAX_SEARCHES = 3
+MAX_DRAFTS = 3
+LESSONS_KEPT = 15

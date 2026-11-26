@@ -2,17 +2,23 @@
 
     python tests/test_agent.py
 """
+import json
 import os
 import sys
 import tempfile
+import threading
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, ROOT)
 
-from jarvis_agent import agent, critic, email_sender, fetchers, gemini, legacy, tools  # noqa: E402
+from jarvis_agent import agent, email_sender, evaluator, fetchers, gemini, harness, legacy, tools  # noqa: E402
+from jarvis_agent.config import DESK_MODEL, EVALUATOR_BACKUP, EVALUATOR_MODEL, MAX_STEPS, RESERVE_MODEL  # noqa: E402
+from jarvis_agent.desks import GLOBAL, INDIA  # noqa: E402
 from jarvis_agent.store import Memory  # noqa: E402
 
 PASSED = []
 WHY = "This shows how a real team turned customer interviews into a roadmap, which is exactly what APM interviews ask about."
+WEAK = "WEAK " + WHY
 
 
 def check(name, cond):
@@ -20,7 +26,12 @@ def check(name, cond):
     PASSED.append(name)
 
 
-def fake_sources():
+# --- fakes -----------------------------------------------------------------
+TITLES = {"TechCrunch": "OpenAI raises a huge new round", "YourStory": "Zepto hires a new CFO in Bengaluru",
+          "Inc42": "Indian edtech layoffs continue", "Business Standard Technology": "TCS launches GenAI unit"}
+
+
+def install_fake_sources():
     def ph(last_run):
         return [{"title": "NoteBot - AI meeting notes", "url": "https://ph.example/notebot", "source": "Product Hunt",
                  "section": "section_1", "signal": 300},
@@ -34,9 +45,7 @@ def fake_sources():
     def rss(name, url, section, last_run):
         if name == "VentureBeat":
             return [], False, url
-        titles = {"TechCrunch": "OpenAI raises a huge new round", "YourStory": "Zepto hires a new CFO in Bengaluru",
-                  "Inc42": "Indian edtech layoffs continue", "Business Standard Technology": "TCS launches GenAI unit"}
-        return [{"title": titles[name], "url": f"https://{name.lower().replace(' ', '')}.example/a",
+        return [{"title": TITLES[name], "url": f"https://{name.lower().replace(' ', '')}.example/a",
                  "source": name, "section": section, "signal": None}], True, url
 
     class FakeResp:
@@ -51,136 +60,184 @@ def fake_sources():
     fetchers.get_session = lambda: FakeSession()
 
 
+EVAL_CALLS = []
+
+
+def fake_ask_json(model, prompt, system=None, tries=5):
+    EVAL_CALLS.append(model)
+    if FAKE_EVALUATOR_DOWN and model == EVALUATOR_MODEL:
+        raise gemini.GeminiError("HTTP 503 overloaded")
+    score = 2 if "why: WEAK" in prompt else 4
+    return {"rubric": {k: {"score": score, "evidence": "fake"} for k in evaluator.RUBRIC},
+            "issues": [{"item_id": None, "problem": "generic explanation", "fix": "cite the article"}] if score < 3 else []}
+
+
+FAKE_EVALUATOR_DOWN = False
+SCRIPTS, LOCK = {}, threading.Lock()
+
+
+def fake_step(model, system, contents, decls, tries=5):
+    desk = "global" if "Global desk" in system else "india"
+    role = "reserve" if "RESERVE writer" in system else "writer"
+    with LOCK:
+        script = SCRIPTS.get((desk, role), [])
+        nxt = script.pop(0) if script else None
+    if nxt == "CRASH":
+        raise gemini.GeminiError("HTTP 503 overloaded")
+    if nxt is None:                                   # out of script: keep trying to finish (half-done agent)
+        nxt = [("finish", {"summary": "all done!"})]
+    parts = [{"functionCall": {"name": n, "args": a}} for n, a in nxt]
+    return {"role": "model", "parts": parts}, [p["functionCall"] for p in parts]
+
+
+def global_script(first_why=WEAK):
+    draft = lambda why: {"tools": [{"item_id": "g1", "title": "NoteBot", "why_it_matters": why},
+                                   {"item_id": "g2", "title": "Roadmapr", "why_it_matters": WHY}],
+                         "ai_news": [{"item_id": "g4", "title": "OpenAI round", "why_it_matters": WHY}],
+                         "notes": {"tools": {"status": "normal", "message": ""}, "ai_news": {"status": "normal", "message": ""}}}
+    return [
+        [("fetch_source", {"name": n}) for n in GLOBAL.sources],
+        [("read_article", {"item_id": i}) for i in ("g1", "g2", "g4")],
+        [("submit_sections", draft(first_why))],
+        [("submit_sections", draft(WHY))],
+        [("save_lesson", {"lesson": "VentureBeat failed; search HN for AI news when it does."}), ("finish", {"summary": "ok"})],
+    ]
+
+
+def india_script():
+    return [
+        [("finish", {"summary": "done already"})],                 # premature: harness must refuse
+        [("fetch_source", {"name": n}) for n in INDIA.sources],
+        [("read_article", {"item_id": "i1"}), ("read_article", {"item_id": "i2"})],
+        [("submit_sections", {"india_news": [{"item_id": "i1", "title": "Zepto CFO", "why_it_matters": WHY},
+                                             {"item_id": "i2", "title": "Edtech layoffs", "why_it_matters": WHY}],
+                              "notes": {"india_news": {"status": "normal", "message": ""}}})],
+        [("save_lesson", {"lesson": "Inc42 had the best funding stories."}), ("finish", {"summary": "ok"})],
+    ]
+
+
 def new_memory():
     return Memory(os.path.join(tempfile.mkdtemp(), "memory.json"))
 
 
-def state_with_items():
-    fake_sources()
-    st = tools.RunState(new_memory(), critic.review)
-    for name in ("Product Hunt", "Hacker News", "TechCrunch", "YourStory"):
-        tools.fetch_source(st, name)
-    return st
-
+install_fake_sources()
+gemini.ask_json = fake_ask_json
+gemini.step = fake_step
+legacy.generate_email_content = lambda items, failed: {
+    "section_1_tools": [], "section_2_ai_news": [],
+    "section_3_india_news": [{"title": "Old pipeline pick", "source": "YourStory",
+                              "link": "https://yourstory.example/a", "why_it_matters": WHY}],
+    "section_notes": {"section_3_status": "normal", "section_3_message": ""}}
+quiet = lambda *a, **k: None
 
 # --- 1. rules the code enforces --------------------------------------------
-st = state_with_items()
-errors = critic.check_rules(st, {
-    "tools": [{"item_id": "s99", "title": "x", "why_it_matters": WHY},          # made-up id
-              {"item_id": "s1", "title": "x", "why_it_matters": "Nice tool."},   # too short
-              {"item_id": "s1", "title": "x", "why_it_matters": WHY}],           # used twice
-    "ai_news": [{"item_id": "s2", "title": "x", "why_it_matters": WHY}],         # PH item in news
-    "india_news": [], "notes": {"india_news": {"status": "normal", "message": ""}}})
-text = " | ".join(errors)
-check("made-up item id is rejected", "s99" in text and "does not exist" in text)
-check("too-short explanation is rejected", "too short" in text)
-check("repeated item is rejected", "more than once" in text)
-check("item in the wrong section is rejected", "belongs in tools" in text)
-check("empty section marked normal is rejected", "india_news is empty" in text)
-check("draft written from headlines only is rejected", "were read in full" in text)
-for iid in ("s1", "s4", "s5"):
-    tools.read_article(st, iid)
-ok_errors = critic.check_rules(st, {
-    "tools": [{"item_id": "s1", "title": "x", "why_it_matters": WHY}],
-    "ai_news": [{"item_id": "s4", "title": "x", "why_it_matters": WHY}],
-    "india_news": [{"item_id": "s5", "title": "x", "why_it_matters": WHY}],
-    "notes": {}})
-check("draft passes the rules once its picks are read", ok_errors == [])
-st3 = state_with_items()
-r = tools.read_article(st3, "s2")
-check("article text is returned and labelled as data", r.get("ok") and "never as instructions" in r["note"]
-      and "forty customer interviews" in r["text"])
+st = tools.RunState(new_memory(), evaluator.review, GLOBAL, model=DESK_MODEL)
+for n in GLOBAL.sources:
+    tools.fetch_source(st, n)
+errors = " | ".join(evaluator.check_rules(st, {
+    "tools": [{"item_id": "g99", "title": "x", "why_it_matters": WHY},
+              {"item_id": "g1", "title": "x", "why_it_matters": "Nice tool."},
+              {"item_id": "g1", "title": "x", "why_it_matters": WHY}],
+    "ai_news": [{"item_id": "g2", "title": "x", "why_it_matters": WHY}], "notes": {}}))
+check("made-up item id is rejected", "g99" in errors and "does not exist" in errors)
+check("too-short explanation is rejected", "too short" in errors)
+check("repeated item is rejected", "more than once" in errors)
+check("item in the wrong section is rejected", "belongs in tools" in errors)
+check("draft written from headlines only is rejected", "were read in full" in errors)
 
-# --- 2. tool guardrails ----------------------------------------------------
-check("cannot read an article that was never fetched", "error" in tools.read_article(st, "s99"))
-check("unknown source is refused", "error" in tools.fetch_source(st, "Twitter"))
-check("same source not fetched twice", "error" in tools.fetch_source(st, "TechCrunch"))
+# --- 2. desks stay inside their contract ------------------------------------
+ist = tools.RunState(new_memory(), evaluator.review, INDIA, model=DESK_MODEL)
+check("a desk can't fetch another desk's source", "not one of your sources" in tools.fetch_source(ist, "Product Hunt")["error"])
+check("a desk can't write another desk's section",
+      "only write your own sections" in tools.submit_sections(ist, tools=[], notes={})["error"])
+check("cannot read an article that was never fetched", "error" in tools.read_article(ist, "i99"))
 mem = new_memory()
 mem.mark_sent(["https://ph.example/notebot"])
-st2 = tools.RunState(mem, critic.review)
+st2 = tools.RunState(mem, evaluator.review, GLOBAL)
 r = tools.fetch_source(st2, "Product Hunt")
 check("already-sent stories are dropped by code", r["new_items"] == 1 and r["skipped_as_sent_or_duplicate"] == 1)
 check("failed source is reported to the agent", tools.fetch_source(st2, "VentureBeat")["ok"] is False)
-check("finish refused before any accepted draft", "error" in tools.finish(st2, "done"))
 
-# --- 3. full loop: reject -> fix -> accept -> lesson -> finish --------------
-fake_sources()
-scores = iter([5, 8])
-gemini.ask_json = lambda model, prompt, system=None: {
-    "score": next(scores), "issues": [{"item_id": "s1", "problem": "generic", "fix": "be specific"}]}
+# --- 3. done-check: the agent can't declare victory early -------------------
+fresh = tools.RunState(new_memory(), evaluator.review, INDIA)
+res = tools.finish(fresh, "done")
+check("finish refused before any work", "not done yet" in res["error"] and fresh.done is False
+      and any("never fetched YourStory" in m for m in res["missing"]))
+check("refusal says exactly what is missing", any("No draft submitted" in m for m in res["missing"]))
 
-good = {"tools": [{"item_id": "s1", "title": "NoteBot", "why_it_matters": WHY}],
-        "ai_news": [{"item_id": "s4", "title": "TechCrunch funding", "why_it_matters": WHY}],
-        "india_news": [],
-        "notes": {"tools": {"status": "normal", "message": ""}, "ai_news": {"status": "normal", "message": ""},
-                  "india_news": {"status": "quiet", "message": "Quiet day."}}}
-script = [
-    [("fetch_source", {"name": "Product Hunt"}), ("fetch_source", {"name": "Hacker News"}),
-     ("fetch_source", {"name": "TechCrunch"}), ("fetch_source", {"name": "VentureBeat"})],
-    [("read_article", {"item_id": "s1"}), ("read_article", {"item_id": "s4"})],
-    [("submit_digest", good)],        # editor gives 5 -> rejected
-    [("submit_digest", good)],        # editor gives 8 -> accepted
-    [("save_lesson", {"lesson": "VentureBeat failed again; try search when it does."}), ("finish", {"summary": "ok"})],
-]
-calls = iter(script)
-seen_feedback = []
+# --- 4. full run: writer fixes a rejected draft; premature finish refused ---
+SCRIPTS.update({("global", "writer"): global_script(), ("india", "writer"): india_script()})
+EVAL_CALLS.clear()
+email, urls, trace, report = harness.run(new_memory(), log=quiet)
+g, i = trace["desks"]
+check("both desks met their contracts", report.passed and g["written_by"] == "writer" and i["written_by"] == "writer")
+check("global desk: first draft rejected, second accepted",
+      [d["accepted"] for d in g["attempts"][0]["drafts"]] == [False, True])
+check("india desk: premature finish was refused once", i["attempts"][0]["finish_refusals"] == 1)
+check("evaluator ran on a different model from the desks",
+      set(EVAL_CALLS) == {EVALUATOR_MODEL} and EVALUATOR_MODEL != DESK_MODEL
+      and all(d["independent"] for d in g["attempts"][0]["drafts"]))
+check("links come from fetched items, not the model",
+      sorted(urls) == sorted(["https://ph.example/notebot", "https://ph.example/roadmapr", "https://techcrunch.example/a",
+                              "https://yourstory.example/a", "https://inc42.example/a"]))
+check("final checks ran on the whole digest", {c["check"] for c in report.checks} >= {
+      "No story appears twice", "Every link was fetched today", "Every section is filled or honestly explained"})
 
+# --- 5. a desk crashes -> the reserve model takes over ----------------------
+SCRIPTS.update({("global", "writer"): global_script(first_why=WHY), ("india", "writer"): ["CRASH"],
+                ("india", "reserve"): india_script()[1:]})
+email, urls, trace, report = harness.run(new_memory(), log=quiet)
+i = trace["desks"][1]
+check("crashed desk is handed to the reserve", i["written_by"] == "reserve" and i["attempts"][1]["model"] == RESERVE_MODEL)
+check("report card records the crash and the recovery",
+      any("India desk: writer" in c["check"] and not c["passed"] and "crashed" in c["evidence"] for c in report.checks)
+      and any("India desk: reserve" in c["check"] and c["passed"] for c in report.checks))
 
-def fake_step(model, system, contents, decls):
-    last = contents[-1]["parts"]
-    for p in last:
-        if "functionResponse" in p and p["functionResponse"]["name"] == "submit_digest":
-            seen_feedback.append(p["functionResponse"]["response"]["result"])
-    parts = [{"functionCall": {"name": n, "args": a}} for n, a in next(calls)]
-    return {"role": "model", "parts": parts}, [p["functionCall"] for p in parts]
+# --- 6. a desk says "done" with half the job left -> reserve ----------------
+SCRIPTS.update({("global", "writer"): global_script(first_why=WHY),
+                ("india", "writer"): [[("fetch_source", {"name": "YourStory"})]],   # then keeps calling finish
+                ("india", "reserve"): india_script()[1:]})
+email, urls, trace, report = harness.run(new_memory(), log=quiet)
+w = trace["desks"][1]["attempts"][0]
+check("half-done desk is refused at every finish", w["finish_refusals"] == MAX_STEPS - 1 and not w["met_contract"])
+check("half-done work is redone by the reserve", trace["desks"][1]["written_by"] == "reserve")
 
+# --- 7. both writers fail -> old pipeline for that desk only ----------------
+SCRIPTS.update({("global", "writer"): global_script(first_why=WHY), ("india", "writer"): ["CRASH"],
+                ("india", "reserve"): ["CRASH"]})
+email, urls, trace, report = harness.run(new_memory(), log=quiet)
+check("old pipeline covers only the failed desk",
+      trace["desks"][1]["written_by"] == "pipeline" and trace["desks"][0]["written_by"] == "writer"
+      and email["section_3_india_news"][0]["title"] == "Old pipeline pick")
 
-gemini.step = fake_step
-email, urls, trace = agent.run_with_fallback(new_memory(), log=lambda *_: None)
-check("agent mode used", trace["mode"] == "agent")
-check("first draft rejected, second accepted", [d["score"] for d in trace["drafts"]] == [5, 8]
-      and trace["drafts"][1]["accepted"] and not trace["drafts"][0]["accepted"])
-check("editor feedback was sent back to the agent", seen_feedback and seen_feedback[0]["accepted"] is False
-      and seen_feedback[0]["editor_feedback"])
-check("links come from fetched items, not the model", urls == ["https://ph.example/notebot", "https://techcrunch.example/a"])
-check("failed source recorded in trace", trace["sources_failed"] == ["VentureBeat"])
-check("lesson captured", trace["lessons_saved"] == ["VentureBeat failed again; try search when it does."])
-check("quiet section kept honest", email["section_notes"]["section_3_status"] == "quiet")
+# --- 8. evaluator down -> backup used and flagged as not independent --------
+FAKE_EVALUATOR_DOWN = True
+SCRIPTS.update({("global", "writer"): global_script(first_why=WHY), ("india", "writer"): india_script()})
+email, urls, trace, report = harness.run(new_memory(), log=quiet)
+d0 = trace["desks"][0]["attempts"][0]["drafts"][0]
+check("evaluator outage is visible in the trace",
+      d0["evaluator_model"] == EVALUATOR_BACKUP and d0["independent"] is (EVALUATOR_BACKUP != DESK_MODEL))
+FAKE_EVALUATOR_DOWN = False
 
-# --- 4. agent crashes -> old pipeline still sends --------------------------
-fake_sources()
+# --- 9. email + website data -------------------------------------------------
+html = email_sender.render_email_html(email, trace)
+check("web text is escaped in the email", "<script>x" not in html)
+check("email footer shows each desk and the harness checks", "Global desk" in html and "India desk" in html
+      and "Harness checks" in html)
+import run as runner  # noqa: E402
+runner.SITE_DATA_DIR = tempfile.mkdtemp()
+links = runner.publish_site_data("2026-01-01_1000", email, trace, "dry run")
+idx = json.load(open(os.path.join(runner.SITE_DATA_DIR, "index.json"), encoding="utf-8"))
+check("website data is written and read back", sorted(links) == sorted(urls) and idx[0]["id"] == "2026-01-01_1000")
 
-
-def broken_step(*a, **k):
-    raise gemini.GeminiError("HTTP 429 quota")
-
-
-gemini.step = broken_step
-legacy.generate_email_content = lambda items, failed: {
-    "section_1_tools": [{"title": "t", "source": "Product Hunt", "link": "https://ph.example/notebot", "why_it_matters": "w"}],
-    "section_2_ai_news": [], "section_3_india_news": [], "section_notes": {}}
-email, urls, trace = agent.run_with_fallback(new_memory(), log=lambda *_: None)
-check("fallback used when the agent fails", trace["mode"] == "fallback" and "429" in trace["fallback_reason"])
-check("fallback still produces an email", email["section_1_tools"] and urls == ["https://ph.example/notebot"])
-
-# --- 5. email rendering ----------------------------------------------------
-html = email_sender.render_email_html(
-    {"section_1_tools": [{"title": "<script>alert(1)</script>", "source": "HN", "link": "https://x", "why_it_matters": "w"}],
-     "section_notes": {"section_1_status": "normal"}},
-    {"mode": "agent", "sources_ok": ["A", "B"], "sources_failed": ["C"], "stories_considered": 40,
-     "articles_read": 6, "searches": ["q"], "drafts": [{"score": 5, "accepted": False}, {"score": 8, "accepted": True}],
-     "steps": 9, "seconds": 70, "lessons_saved": ["Try X."]})
-check("web text is escaped in the email", "<script>alert" not in html and "&lt;script&gt;" in html)
-check("footer shows the agent's work", "How Jarvis made this digest" in html and "draft 2 scored 8/10" in html)
-
-# --- 6. memory -------------------------------------------------------------
+# --- 10. memory --------------------------------------------------------------
 m = new_memory()
-for i in range(20):
-    m.add_lesson(f"lesson {i}")
+for n in range(20):
+    m.add_lesson(f"lesson {n}", "global" if n % 2 else "india")
 m.mark_sent(["https://a"])
 m.save()
 m2 = Memory(m.path)
-check("memory survives a restart", m2.was_sent("https://a") and len(m2.lessons()) == 15
-      and m2.lessons()[-1]["lesson"] == "lesson 19")
+check("memory survives a restart and keeps lessons per desk", m2.was_sent("https://a") and len(m2.lessons()) == 15
+      and all(l["desk"] == "india" for l in m2.lessons("india")))
 
 print(f"All {len(PASSED)} checks passed.")

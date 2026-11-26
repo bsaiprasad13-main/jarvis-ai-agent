@@ -138,17 +138,18 @@
     <!-- How the agent made this digest -->
     <div style="margin-top:36px; padding:14px 16px; border-top:2px solid #eaeaea; font-size:0.85em; color:#555555;">
         <p style="margin:0 0 6px 0; font-weight:bold;">How Jarvis made this digest</p>
-        {% if trace.mode == 'agent' %}
-        <p style="margin:0;">
-            Checked {{ trace.sources_ok|length }} sources{% if trace.sources_failed %} ({{ trace.sources_failed|join(', ') }} failed){% endif %},
-            considered {{ trace.stories_considered }} new stories, read {{ trace.articles_read }} articles in full{% if trace.searches %}, ran {{ trace.searches|length }} extra search{{ 'es' if trace.searches|length > 1 }}{% endif %}.
-            {% if trace.drafts %}Editor review: {% for d in trace.drafts %}draft {{ loop.index }} scored {{ d.score }}/10{% if d.accepted %} ✓{% else %} ✗{% endif %}{% if not loop.last %}, {% endif %}{% endfor %}.{% endif %}
-            {{ trace.steps }} steps, {{ trace.seconds }}s.
+        {% for d in trace.desks %}
+        {% set a = d.attempts[-1] %}
+        <p style="margin:0 0 4px 0;">
+            <b>{{ d.title }}</b>:
+            {% if d.written_by == 'pipeline' %}both writers failed, so the backup pipeline wrote this part.
+            {% elif d.written_by == 'failed' %}could not be written today.
+            {% else %}{% if d.written_by == 'reserve' %}the first writer failed, the reserve model took over. {% endif %}considered {{ a.stories_considered }} stories, read {{ a.read|length }} in full.
+            Evaluator: {% for x in a.drafts %}draft {{ loop.index }} {{ x.score }}/10{% if x.accepted %} ✓{% else %} ✗{% endif %}{% if not loop.last %}, {% endif %}{% endfor %}.{% endif %}
         </p>
-        {% if trace.lessons_saved %}<p style="margin:6px 0 0 0;">Note for tomorrow: {{ trace.lessons_saved|join(' ') }}</p>{% endif %}
-        {% else %}
-        <p style="margin:0;">The agent hit a problem today, so the backup pipeline wrote this digest.</p>
-        {% endif %}
+        {% endfor %}
+        {% set passed = trace.report_card|selectattr('passed')|list|length %}
+        <p style="margin:6px 0 0 0;">Harness checks: {{ passed }}/{{ trace.report_card|length }} passed · {{ trace.seconds }}s.</p>
     </div>
     {% endif %}
 

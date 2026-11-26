@@ -1,6 +1,6 @@
-"""The agent's tools, and the run state they share.
+"""A desk's tools, its run state, and its definition of done.
 
-The model only ever sees short item ids (like "s14"), never raw URLs it could
+The model only ever sees short item ids (like "g14"), never raw URLs it could
 make up. Code turns ids back into real links when the email is built, so every
 link in the digest is one Jarvis actually fetched today.
 """
@@ -13,38 +13,44 @@ from . import fetchers
 from .config import MAX_ARTICLE_READS, MAX_DRAFTS, MAX_SEARCHES
 from .vector_store import VectorStore
 
-SOURCES = [
-    {"name": "Product Hunt", "method": "api", "url": "api", "section": "section_1"},
-    {"name": "Hacker News", "method": "api", "url": "api", "section": "section_1"},
-    {"name": "TechCrunch", "method": "rss", "url": "https://techcrunch.com/category/artificial-intelligence/feed/", "section": "section_2"},
-    {"name": "VentureBeat", "method": "rss", "url": "https://venturebeat.com/category/ai/feed/", "section": "section_2"},
-    {"name": "YourStory", "method": "rss", "url": "https://yourstory.com/feed", "section": "section_3"},
-    {"name": "Inc42", "method": "rss", "url": "https://inc42.com/feed/", "section": "section_3"},
-    {"name": "Business Standard Technology", "method": "rss", "url": "https://www.business-standard.com/rss/technology-108.rss", "section": "section_3"},
-]
-SECTION_NAMES = {"section_1": "tools", "section_2": "ai_news", "section_3": "india_news"}
+SOURCES = {
+    "Product Hunt": {"method": "api", "url": "api", "section": "tools"},
+    "Hacker News": {"method": "api", "url": "api", "section": "tools"},
+    "TechCrunch": {"method": "rss", "url": "https://techcrunch.com/category/artificial-intelligence/feed/", "section": "ai_news"},
+    "VentureBeat": {"method": "rss", "url": "https://venturebeat.com/category/ai/feed/", "section": "ai_news"},
+    "YourStory": {"method": "rss", "url": "https://yourstory.com/feed", "section": "india_news"},
+    "Inc42": {"method": "rss", "url": "https://inc42.com/feed/", "section": "india_news"},
+    "Business Standard Technology": {"method": "rss", "url": "https://www.business-standard.com/rss/technology-108.rss", "section": "india_news"},
+}
+LEGACY_SECTION = {"tools": "section_1", "ai_news": "section_2", "india_news": "section_3"}
 DIGEST_KEYS = ("tools", "ai_news", "india_news")
-LESSONS_PER_RUN = 2
+LESSONS_PER_RUN = 1
 
 
 class RunState:
-    def __init__(self, memory, critic):
+    def __init__(self, memory, evaluator, desk, model=None, role="writer"):
         self.memory = memory
-        self.critic = critic            # function(state, digest) -> review dict
+        self.evaluator = evaluator      # function(state, digest) -> review dict
+        self.desk = desk
+        self.model = model
+        self.role = role                # "writer" or "reserve"
         self.items = {}                 # id -> item
         self.sources = {}               # name -> {"ok": bool, "count": int}
-        self.reads = []                 # ids read in full
-        self.searches = []              # queries
-        self.drafts = []                # [{"digest", "review"}]
-        self.accepted = None            # digest the critic accepted
+        self.reads = []                 # ids opened with read_article
+        self.searches = []
+        self.drafts = []                # [{"digest", "review", "read_ids"}]
+        self.accepted = None            # digest the evaluator accepted
         self.lessons = []
         self.done = False
+        self.finish_refusals = 0
         self.summary = ""
-        self.events = []                # trace of every tool call
+        self.events = []
+        self.steps = 0
+        self.seconds = 0
+        self.error = None
         self._dedup = VectorStore()
         self._next = 1
 
-    # ---------------------------------------------------------------
     def add_item(self, item):
         """Keep an item if it's new (not sent before, not a near-duplicate)."""
         if not item.get("url") or not item.get("title"):
@@ -53,15 +59,46 @@ class RunState:
             return None
         if not self._dedup.add_item_if_not_duplicate(item):
             return None
-        item_id = f"s{self._next}"
+        item_id = f"{self.desk.prefix}{self._next}"
         self._next += 1
         item["id"] = item_id
         self.items[item_id] = item
         return item_id
 
-    def best_valid_draft(self):
+    def final_digest(self):
+        """The accepted draft, or at the draft limit the best one that broke no rules."""
+        if self.accepted:
+            return self.accepted
         ok = [d for d in self.drafts if not d["review"]["rule_errors"]]
-        return max(ok, key=lambda d: d["review"]["score"], default=None)
+        best = max(ok, key=lambda d: d["review"]["score"], default=None)
+        return best["digest"] if best and len(self.drafts) >= MAX_DRAFTS else None
+
+
+# --- definition of done (checked by code, never by the model) ---------------
+
+def done_check(state):
+    """Every unmet condition, each written as an instruction the agent can act on."""
+    desk, missing = state.desk, []
+    for name in desk.sources:
+        if name not in state.sources:
+            missing.append(f"You never fetched {name}. Call fetch_source('{name}').")
+    digest = state.final_digest()
+    if digest is None:
+        if not state.drafts:
+            missing.append("No draft submitted yet. Call submit_sections.")
+        else:
+            missing.append("The evaluator has not accepted a draft yet. Fix its feedback and call submit_sections again.")
+        return missing
+    picks = [str(e.get("item_id")) for k in desk.sections for e in (digest.get(k) or [])]
+    read = [i for i in picks if state.items.get(i, {}).get("read_attempted")]
+    if len(read) < min(desk.min_read, len(picks)):
+        missing.append(f"Only {len(read)} picks were read in full; your contract needs {min(desk.min_read, len(picks))}.")
+    notes = digest.get("notes") or {}
+    for key in desk.sections:
+        note = notes.get(key) or {}
+        if not digest.get(key) and not (note.get("status") in ("quiet", "source_issue") and note.get("message")):
+            missing.append(f"Section {key} is empty with no explanation. Add items or mark it quiet/source_issue with a reason.")
+    return missing
 
 
 def _brief(item):
@@ -74,29 +111,33 @@ def _brief(item):
 # --- tools ----------------------------------------------------------------
 
 def fetch_source(state, name):
-    src = next((s for s in SOURCES if s["name"].lower() == str(name).lower()), None)
-    if not src:
-        return {"error": f"unknown source. Choose one of: {[s['name'] for s in SOURCES]}"}
-    if src["name"] in state.sources:
-        return {"error": "already fetched this run", **state.sources[src["name"]]}
-
+    match = next((n for n in SOURCES if n.lower() == str(name).lower()), None)
+    if not match or match not in state.desk.sources:
+        return {"error": f"'{name}' is not one of your sources. Your sources are: {list(state.desk.sources)}"}
+    if match in state.sources:
+        return {"error": "already fetched this run", **state.sources[match]}
+    src = SOURCES[match]
     last_run = state.memory.last_run()
-    if src["name"] == "Product Hunt":
+    if match == "Product Hunt":
         raw, ok = fetchers.fetch_product_hunt(last_run)
-    elif src["name"] == "Hacker News":
+    elif match == "Hacker News":
         raw, ok = fetchers.fetch_hacker_news(last_run)
     else:
-        url = state.memory.source_url(src["name"], src["url"])
-        raw, ok, new_url = fetchers.fetch_rss(src["name"], url, src["section"], last_run)
+        url = state.memory.source_url(match, src["url"])
+        raw, ok, new_url = fetchers.fetch_rss(match, url, LEGACY_SECTION[src["section"]], last_run)
         if ok and new_url != url:
-            state.memory.set_source_url(src["name"], new_url)   # self-healing feed URL
-
-    kept = [i for i in (state.add_item(dict(r)) for r in raw) if i]
-    state.sources[src["name"]] = {"ok": ok, "count": len(kept)}
+            state.memory.set_source_url(match, new_url)      # self-healing feed URL
+    kept = []
+    for r in raw:
+        item = dict(r, section=src["section"], source=match)
+        item_id = state.add_item(item)
+        if item_id:
+            kept.append(item_id)
+    state.sources[match] = {"ok": ok, "count": len(kept)}
     if not ok:
-        return {"ok": False, "message": f"{src['name']} could not be reached (tried alternative feed URLs and a proxy). "
-                "Decide whether to fill the gap with search_hacker_news or to report a source issue."}
-    return {"ok": True, "section": SECTION_NAMES[src["section"]], "new_items": len(kept),
+        return {"ok": False, "message": f"{match} could not be reached (tried alternative feed URLs and a proxy). "
+                "Decide whether to fill the gap with search_hacker_news or to report a source_issue."}
+    return {"ok": True, "section": src["section"], "new_items": len(kept),
             "skipped_as_sent_or_duplicate": len(raw) - len(kept),
             "items": [_brief(state.items[i]) for i in kept]}
 
@@ -110,7 +151,8 @@ def _page_text(raw_html):
 
 
 def read_article(state, item_id):
-    item = state.items.get(str(item_id))
+    item_id = str(item_id)
+    item = state.items.get(item_id)
     if not item:
         return {"error": "unknown item id. You can only read items returned by fetch_source or search_hacker_news."}
     if item_id in state.reads:
@@ -157,30 +199,31 @@ def search_hacker_news(state, query):
         if item_id:
             kept.append(_brief(state.items[item_id]))
     return {"ok": True, "query": query, "items": kept,
-            "note": "Search results can go in any section where they truly fit."}
+            "note": "Search results can go in any of your sections where they truly fit."}
 
 
-def submit_digest(state, tools=None, ai_news=None, india_news=None, notes=None):
-    digest = {"tools": tools or [], "ai_news": ai_news or [], "india_news": india_news or [], "notes": notes or {}}
+def submit_sections(state, notes=None, **sections):
+    desk = state.desk
+    extra = [k for k in sections if k not in desk.sections]
+    if extra:
+        return {"error": f"you can only write your own sections {list(desk.sections)}, not {extra}"}
+    digest = {k: sections.get(k) or [] for k in desk.sections}
+    digest["notes"] = notes or {}
     if state.accepted:
-        return {"error": "a digest was already accepted. Save a lesson, then call finish."}
+        return {"error": "a draft was already accepted. Save a lesson, then call finish."}
     if len(state.drafts) >= MAX_DRAFTS:
         return {"error": "draft limit reached. Call finish."}
-    review = state.critic(state, digest)
+    review = state.evaluator(state, digest)
     state.drafts.append({"digest": digest, "review": review,
                          "read_ids": [i for i in state.reads if state.items.get(i, {}).get("article")]})
-    accepted = review["accepted"]
-    if not accepted and len(state.drafts) >= MAX_DRAFTS and not review["rule_errors"]:
-        accepted = True                  # last allowed draft: take it if it breaks no rules
-        review["note"] = "accepted at the draft limit"
-    if accepted:
+    if review["accepted"]:
         state.accepted = digest
         return {"accepted": True, "score": review["score"],
-                "next": "Call save_lesson with what you learned today (what to do differently tomorrow), then call finish."}
+                "next": "Call save_lesson with one specific lesson for tomorrow, then call finish."}
     left = MAX_DRAFTS - len(state.drafts)
     return {"accepted": False, "score": review["score"], "rule_errors": review["rule_errors"],
-            "editor_feedback": review["issues"], "drafts_left": left,
-            "next": "Fix every problem listed, read more articles if needed, then submit_digest again."
+            "rubric": review["rubric"], "evaluator_feedback": review["issues"], "drafts_left": left,
+            "next": "Fix every problem listed (read more articles if needed), then submit_sections again."
             if left else "No drafts left. Call finish."}
 
 
@@ -192,14 +235,17 @@ def save_lesson(state, lesson):
 
 
 def finish(state, summary=""):
-    if not state.accepted and len(state.drafts) < MAX_DRAFTS:
-        return {"error": "no digest accepted yet. Submit one with submit_digest first."}
+    missing = done_check(state)
+    if missing and len(state.drafts) < MAX_DRAFTS:
+        state.finish_refusals += 1
+        return {"error": "You are not done yet. The harness checked your contract and found:",
+                "missing": missing, "next": "Fix these, then call finish again."}
     state.done = True
     state.summary = str(summary)[:500]
     return {"ok": True}
 
 
-TOOLS = {f.__name__: f for f in (fetch_source, read_article, search_hacker_news, submit_digest, save_lesson, finish)}
+TOOLS = {f.__name__: f for f in (fetch_source, read_article, search_hacker_news, submit_sections, save_lesson, finish)}
 
 
 def dispatch(state, name, args):
@@ -211,8 +257,7 @@ def dispatch(state, name, args):
             result = fn(state, **(args or {}))
         except TypeError as e:
             result = {"error": f"bad arguments: {e}"}
-    state.events.append({"step": getattr(state, "steps", None), "tool": name,
-                         "args": _short(args), "result": _short(result)})
+    state.events.append({"step": state.steps, "tool": name, "args": _short(args), "result": _short(result)})
     return result
 
 
@@ -221,12 +266,12 @@ def _short(obj):
     return s if len(s) <= 300 else s[:300] + "..."
 
 
-# --- tool descriptions for Gemini -----------------------------------------
+# --- tool descriptions for Gemini (built per desk) -------------------------
 
 _ITEM = {
     "type": "OBJECT",
     "properties": {
-        "item_id": {"type": "STRING", "description": "Item id from fetch_source or search_hacker_news, e.g. s14"},
+        "item_id": {"type": "STRING", "description": "Item id from fetch_source or search_hacker_news, e.g. g14"},
         "title": {"type": "STRING", "description": "Short, clear title"},
         "why_it_matters": {"type": "STRING", "description": "1-2 simple sentences, specific to someone breaking into product management"},
     },
@@ -241,34 +286,31 @@ _NOTE = {
     "required": ["status", "message"],
 }
 
-DECLARATIONS = [
-    {"name": "fetch_source",
-     "description": "Fetch new stories from one source. Sources: " + ", ".join(s["name"] for s in SOURCES)
-     + ". Already-sent and duplicate stories are removed by code.",
-     "parameters": {"type": "OBJECT", "properties": {"name": {"type": "STRING"}}, "required": ["name"]}},
-    {"name": "read_article",
-     "description": f"Read the full text of one fetched story (max {MAX_ARTICLE_READS} per run). "
-     "Use it before writing why_it_matters for stories you are unsure about.",
-     "parameters": {"type": "OBJECT", "properties": {"item_id": {"type": "STRING"}}, "required": ["item_id"]}},
-    {"name": "search_hacker_news",
-     "description": f"Search Hacker News stories from the last 72 hours (max {MAX_SEARCHES} per run). "
-     "Use it to fill a gap, e.g. when a source failed or a section is thin.",
-     "parameters": {"type": "OBJECT", "properties": {"query": {"type": "STRING"}}, "required": ["query"]}},
-    {"name": "submit_digest",
-     "description": f"Submit a draft digest. An independent editor reviews it and either accepts it or sends "
-     f"back problems to fix (max {MAX_DRAFTS} drafts).",
-     "parameters": {"type": "OBJECT", "properties": {
-         "tools": {"type": "ARRAY", "items": _ITEM, "description": "0-8 AI tools useful for PM work"},
-         "ai_news": {"type": "ARRAY", "items": _ITEM, "description": "0-8 AI industry news items"},
-         "india_news": {"type": "ARRAY", "items": _ITEM, "description": "0-8 India startup/company news items"},
-         "notes": {"type": "OBJECT", "properties": {"tools": _NOTE, "ai_news": _NOTE, "india_news": _NOTE},
-                   "required": ["tools", "ai_news", "india_news"]},
-     }, "required": ["tools", "ai_news", "india_news", "notes"]}},
-    {"name": "save_lesson",
-     "description": "Save one short lesson for your future runs (what to do differently, which sources were useful).",
-     "parameters": {"type": "OBJECT", "properties": {"lesson": {"type": "STRING"}}, "required": ["lesson"]}},
-    {"name": "finish",
-     "description": "End the run after your digest is accepted.",
-     "parameters": {"type": "OBJECT", "properties": {"summary": {"type": "STRING",
-                    "description": "One or two sentences on how today's run went"}}, "required": ["summary"]}},
-]
+
+def declarations_for(desk):
+    section_props = {k: {"type": "ARRAY", "items": _ITEM, "description": f"0-{desk.max_items} items"} for k in desk.sections}
+    section_props["notes"] = {"type": "OBJECT", "properties": {k: _NOTE for k in desk.sections},
+                              "required": list(desk.sections)}
+    return [
+        {"name": "fetch_source",
+         "description": "Fetch new stories from one of your sources: " + ", ".join(desk.sources)
+         + ". Already-sent and duplicate stories are removed by code.",
+         "parameters": {"type": "OBJECT", "properties": {"name": {"type": "STRING"}}, "required": ["name"]}},
+        {"name": "read_article",
+         "description": f"Read the full text of one fetched story (max {MAX_ARTICLE_READS} per run).",
+         "parameters": {"type": "OBJECT", "properties": {"item_id": {"type": "STRING"}}, "required": ["item_id"]}},
+        {"name": "search_hacker_news",
+         "description": f"Search Hacker News stories from the last 72 hours (max {MAX_SEARCHES}). "
+         "Use it to fill a gap, e.g. when a source failed or a section is thin.",
+         "parameters": {"type": "OBJECT", "properties": {"query": {"type": "STRING"}}, "required": ["query"]}},
+        {"name": "submit_sections",
+         "description": f"Submit a draft of your sections. An independent evaluator reviews it and either accepts it "
+         f"or sends back problems to fix (max {MAX_DRAFTS} drafts).",
+         "parameters": {"type": "OBJECT", "properties": section_props, "required": list(section_props)}},
+        {"name": "save_lesson",
+         "description": "Save one short, specific lesson for your next run.",
+         "parameters": {"type": "OBJECT", "properties": {"lesson": {"type": "STRING"}}, "required": ["lesson"]}},
+        {"name": "finish",
+         "description": "End your run. The harness checks your contract first and refuses if anything is missing.",
+         "parameters": {"type": "OBJECT", "properties": {"summary": {"type": "STRING"}}, "required": ["summary"]}},
+    ]

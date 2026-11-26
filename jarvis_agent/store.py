@@ -66,12 +66,13 @@ class Memory:
         self.data["source_urls"][name] = url
 
     # --- lessons the agent writes for its future self -------------------
-    def lessons(self):
-        return list(self.data["lessons"])
+    def lessons(self, desk=None):
+        """Lessons for one desk (plus any not tied to a desk), oldest first."""
+        return [l for l in self.data["lessons"] if desk is None or l.get("desk") in (None, desk)]
 
-    def add_lesson(self, text):
+    def add_lesson(self, text, desk=None):
         text = " ".join(str(text).split())[:300]
         if not text:
             return
-        entry = {"date": _now().date().isoformat(), "lesson": text}
+        entry = {"date": _now().date().isoformat(), "desk": desk, "lesson": text}
         self.data["lessons"] = (self.data["lessons"] + [entry])[-LESSONS_KEPT:]

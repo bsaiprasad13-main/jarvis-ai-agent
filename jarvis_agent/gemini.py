@@ -43,22 +43,22 @@ def _content(res):
         raise GeminiError(f"no answer from model: {json.dumps(res)[:300]}")
 
 
-def ask_json(model, prompt, system=None):
-    """One call that must return JSON. Used by the critic and the fallback."""
+def ask_json(model, prompt, system=None, tries=5):
+    """One call that must return JSON. Used by the evaluator."""
     payload = {
         "contents": [{"role": "user", "parts": [{"text": prompt}]}],
         "generationConfig": {"responseMimeType": "application/json"},
     }
     if system:
         payload["systemInstruction"] = {"parts": [{"text": system}]}
-    parts = _content(_post(model, payload)).get("parts", [])
+    parts = _content(_post(model, payload, tries)).get("parts", [])
     text = "".join(p.get("text", "") for p in parts).strip()
     if text.startswith("```"):
         text = text.strip("`").removeprefix("json").strip()
     return json.loads(text)
 
 
-def step(model, system, contents, declarations):
+def step(model, system, contents, declarations, tries=5):
     """One agent step. Returns the model's content (kept as-is, so any
     thought signatures go back unchanged) and the function calls in it."""
     payload = {
@@ -69,7 +69,7 @@ def step(model, system, contents, declarations):
         # run by calling `finish`, never with loose text.
         "toolConfig": {"functionCallingConfig": {"mode": "ANY"}},
     }
-    content = _content(_post(model, payload))
+    content = _content(_post(model, payload, tries))
     content.setdefault("role", "model")
     calls = [p["functionCall"] for p in content.get("parts", []) if "functionCall" in p]
     return content, calls
