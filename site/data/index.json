@@ -21,32 +21,23 @@
   "stories": 12
  },
  {
-  "id": "2026-11-26_1828",
+  "id": "2026-11-26_1911",
   "kind": "agent",
   "mode": "dry run",
-  "file": "data/2026-11-26_1828.json",
-  "stories": 11,
-  "checks_passed": 9,
-  "checks": 9
- },
- {
-  "id": "2026-11-26_1831",
-  "kind": "agent",
-  "mode": "dry run",
-  "file": "data/2026-11-26_1831.json",
-  "stories": 15,
+  "file": "data/2026-11-26_1911.json",
+  "stories": 10,
   "checks_passed": 9,
   "checks": 9,
-  "recoveries": 2
+  "recoveries": 0
  },
  {
-  "id": "2026-11-26_1848",
+  "id": "2026-11-26_1912",
   "kind": "agent",
-  "mode": "daily",
-  "file": "data/2026-11-26_1848.json",
-  "stories": 11,
-  "checks_passed": 8,
-  "checks": 8,
-  "recoveries": 0
+  "mode": "dry run",
+  "file": "data/2026-11-26_1912.json",
+  "stories": 12,
+  "checks_passed": 9,
+  "checks": 9,
+  "recoveries": 3
  }
 ]

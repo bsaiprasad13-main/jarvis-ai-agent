@@ -1,38 +1,38 @@
 {
  "id": "2026-11-25_1000",
  "kind": "pipeline",
- "note": "The original Jarvis pipeline's real 10:00 email: one Gemini call over headlines, no articles read, no review. Links were not kept in the saved copy of the email, so titles are shown without them. Repeats from earlier days: Claude Ship (also on the 24th, and twice in this email) and Matters.AI's ₹115 Cr round (on the 24th from YourStory).",
+ "note": "The original Jarvis pipeline's real 10:00 email: one Gemini call over headlines, no articles read, no review. Links were not kept in the saved copy of the email, so titles are shown without them. Explanations were written for a different reader and are left out. Repeats from earlier days: Claude Ship (also on the 24th, and twice in this email) and Matters.AI's ₹115 Cr round (on the 24th from YourStory).",
  "email": {
   "section_1_tools": [
    {
     "title": "distribution.dev",
     "source": "Product Hunt",
     "link": null,
-    "why_it_matters": "As an aspiring PM, understanding how products find users is key. This tool lets you run developer-focused ad campaigns across multiple sites at once, giving you a practical look at developer marketing channels."
+    "why_it_matters": ""
    },
    {
     "title": "Granular.Build",
     "source": "Product Hunt",
     "link": null,
-    "why_it_matters": "AI agents are transforming how software is built and managed. Playing with this visual workspace for AI agents helps you understand how future product features and internal workflows might be architected."
+    "why_it_matters": ""
    },
    {
     "title": "Clam AI",
     "source": "Product Hunt",
     "link": null,
-    "why_it_matters": "Email and communication overload is a massive productivity killer for PMs. This tool gives you a firsthand look at how AI-driven inbox management can save time on daily triage."
+    "why_it_matters": ""
    },
    {
     "title": "Viktor Code",
     "source": "Product Hunt",
     "link": null,
-    "why_it_matters": "As an engineering student moving into PM, bridging the gap between business requirements and codebase context is vital. Coding agents that understand company-specific context show you how technical debt and product velocity intersect."
+    "why_it_matters": ""
    },
    {
     "title": "Claude Ship",
     "source": "Product Hunt",
     "link": null,
-    "why_it_matters": "Shipping fast is a superpower for early-stage PMs who like to build prototypes. This tool demonstrates how AI can accelerate the engineering loop from code creation to deployment."
+    "why_it_matters": ""
    }
   ],
   "section_2_ai_news": [
@@ -40,31 +40,31 @@
     "title": "Anthropic launches Claude Ship, letting AI agents review, fix, and approve code changes",
     "source": "TechCrunch",
     "link": null,
-    "why_it_matters": "Autonomous code review and deployment tools are changing engineering workflows. Knowing how these capabilities work helps you better scope technical timelines and manage developer productivity as a PM."
+    "why_it_matters": ""
    },
    {
     "title": "Walmart teams up with Meta to bring Black Friday deals to AI agent Muse",
     "source": "TechCrunch",
     "link": null,
-    "why_it_matters": "This partnership is a prime example of conversational commerce and AI agent integrations in retail. Studying use cases like this helps you think about user journeys when monetization meets conversational AI."
+    "why_it_matters": ""
    },
    {
     "title": "Meta brings its Muse AI assistant directly into Instagram DMs",
     "source": "TechCrunch",
     "link": null,
-    "why_it_matters": "Embedding AI assistants into mainstream messaging apps changes how users discover information and services. It is a great case study in feature distribution and user engagement for consumer tech PMs."
+    "why_it_matters": ""
    },
    {
     "title": "Even the best AI agents struggle with everyday life",
     "source": "TechCrunch",
     "link": null,
-    "why_it_matters": "Understanding the current limitations of AI agents helps you spot genuine user pain points and avoid over-engineering features when designing AI products for your future interviews."
+    "why_it_matters": ""
    },
    {
     "title": "Maple raises $5.3M to build AI products that protect your data, even from itself",
     "source": "TechCrunch",
     "link": null,
-    "why_it_matters": "Data privacy and security are massive hurdles for enterprise AI adoption. Knowing how startups tackle privacy-first AI design gives you talking points for B2B product strategy questions."
+    "why_it_matters": ""
    }
   ],
   "section_3_india_news": [
@@ -72,31 +72,31 @@
     "title": "Sarvam AI Launches Dictation API For English, 22 Indian Languages",
     "source": "Inc42",
     "link": null,
-    "why_it_matters": "Localization is everything in the Indian tech market. As a PM building for India, having access to robust multilingual voice APIs opens up huge opportunities for voice-first applications."
+    "why_it_matters": ""
    },
    {
     "title": "Data Security Startup Matters.AI Nets ₹115 Cr From Tanglin Venture Partners, Others",
     "source": "Inc42",
     "link": null,
-    "why_it_matters": "Enterprise SaaS and data security are drawing heavy funding in India. Tracking these funding rounds helps you understand which B2B sectors are growing and hiring software talent."
+    "why_it_matters": ""
    },
    {
     "title": "Shadowfax To Acquire WeFast To Expand Into Intra-City Deliveries",
     "source": "Inc42",
     "link": null,
-    "why_it_matters": "Logistics consolidation in India directly impacts quick-commerce and delivery apps. Analyzing these acquisitions gives you insight into marketplace supply chains and operational strategy."
+    "why_it_matters": ""
    },
    {
     "title": "RBI Proposes ‘Stop Switch’ To Block Digital Payment Frauds",
     "source": "Inc42",
     "link": null,
-    "why_it_matters": "Regulatory compliance and fraud prevention heavily influence fintech product design in India. PMs working in payments must design features that seamlessly adapt to regulatory mandates."
+    "why_it_matters": ""
    },
    {
     "title": "Most Consumer Platforms Rife With Dark Patterns Despite Regulatory Action: Survey",
     "source": "Inc42",
     "link": null,
-    "why_it_matters": "Understanding dark patterns is crucial for ethical product design and UX critique rounds in APM interviews. This survey highlights real compliance risks consumer apps face today."
+    "why_it_matters": ""
    }
   ],
   "section_notes": {}

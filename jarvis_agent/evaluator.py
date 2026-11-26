@@ -115,14 +115,16 @@ CANDIDATES NOT USED:
 def llm_review(state, digest):
     prompt = _prompt(state, digest)
     res = model = None
-    for candidate in [m for m in EVALUATOR_MODELS if m != state.model]:   # never the writer's own model
+    for candidate in [m for m in EVALUATOR_MODELS if m != state.model] + [EVALUATOR_BACKUP]:   # writer's own model last
         try:
             res, model = gemini.ask_json(candidate, prompt, tries=2), candidate
-            break
-        except gemini.GeminiError:
+            if isinstance(res, dict) and isinstance(res.get("rubric"), dict):
+                break
+            res = None                                   # malformed answer: try the next evaluator
+        except (gemini.GeminiError, ValueError):         # ValueError covers bad JSON
             continue
     if res is None:
-        res, model = gemini.ask_json(EVALUATOR_BACKUP, prompt), EVALUATOR_BACKUP
+        raise gemini.GeminiError("no evaluator returned a usable review")
     rubric = {}
     for k in RUBRIC:
         d = (res.get("rubric") or {}).get(k) or {}
@@ -140,8 +142,8 @@ def review(state, digest):
     try:
         rubric, issues, model = llm_review(state, digest)
     except Exception as e:                       # evaluator unavailable: nothing passes on rules alone
-        rubric = {k: {"score": 1, "evidence": "evaluator unavailable"} for k in RUBRIC}
-        issues, model = [{"item_id": None, "problem": f"evaluator unavailable ({type(e).__name__})", "fix": "resubmit"}], None
+        return {"accepted": False, "unavailable": True, "score": None, "rubric": {}, "rule_errors": errors,
+                "issues": [], "evaluator_model": None, "independent": False, "error": type(e).__name__}
     scores = [d["score"] for d in rubric.values()]
     avg = sum(scores) / len(scores)
     passed = not errors and min(scores) >= PASS_MIN_DIM and avg >= PASS_AVG

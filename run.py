@@ -53,7 +53,8 @@ def publish_site_data(stamp, email, trace, mode):
 def main(dry_run, save_memory, no_email=False):
     os.makedirs(RUNS_DIR, exist_ok=True)
     stamp = datetime.datetime.now().strftime("%Y-%m-%d_%H%M")
-    memory = Memory()
+    # test runs keep their own memory, so they never shift production's "last run" or sent-story list
+    memory = Memory(os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "test_memory.json")) if dry_run else Memory()
     memory.prune_sent()
     mode = "dry run" if dry_run else ("daily" if no_email else "live")
     print(f"=== Jarvis run {stamp} ({mode}) ===")

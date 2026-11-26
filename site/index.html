@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Jarvis AI Agent</title>
-<meta name="description" content="A multi-agent news system with an independent evaluator and a code-checked harness. Every daily run, with its evidence.">
+<meta name="description" content="A multi-agent AI brief with an independent evaluator, a code-checked harness, and a chat that runs on your own device.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;600;700&display=swap">
@@ -126,15 +126,41 @@ th { font: 500 12px/1.2 var(--mono); letter-spacing: 0.05em; text-transform: upp
 td.ev { color: var(--muted); font-size: 13px; overflow-wrap: anywhere; }
 footer { margin-top: 56px; padding-top: 18px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13px; display: grid; gap: 4px; }
 @media (prefers-reduced-motion: no-preference) { .run-btn { transition: border-color .15s; } }
+.nav { display: flex; gap: 6px 16px; flex-wrap: wrap; font-size: 14px; }
+.bg { font-size: 12.5px; color: var(--muted); }
+.bg a { color: var(--muted); }
+/* chat */
+.chat { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px; display: grid; gap: 12px; }
+.chat-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.chat input[type=text] { flex: 1 1 260px; min-width: 0; font: inherit; color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; }
+.btn { font: 500 14px/1 var(--body); color: var(--surface); background: var(--agent); border: 0; border-radius: 8px; padding: 11px 14px; cursor: pointer; }
+.btn.ghost { color: var(--agent); background: transparent; border: 1px solid var(--agent); }
+.btn:disabled { opacity: .55; cursor: default; }
+select { font: inherit; color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 8px; padding: 9px 10px; max-width: 100%; }
+.engine { display: flex; gap: 8px 12px; align-items: center; flex-wrap: wrap; font-size: 13.5px; color: var(--muted); }
+.progress { height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; flex: 1 1 160px; min-width: 120px; }
+.progress i { display: block; height: 100%; width: 0; background: var(--agent); }
+.answer { display: grid; gap: 10px; }
+.bubble { background: var(--paper); border-radius: 10px; padding: 12px 14px; font-size: 14.5px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.cites { display: grid; gap: 6px; margin: 0; padding-left: 20px; font-size: 13.5px; color: var(--muted); }
+.stats-line { font: 400 12px/1.4 var(--mono); color: var(--muted); }
+.sr { position: absolute; left: -9999px; }
+/* monitoring */
+.mon { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+@media (max-width: 760px) { .mon { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.mon div { background: var(--surface); padding: 14px; display: grid; gap: 2px; min-width: 0; }
+.mon b { font: 600 24px/1.1 var(--display); font-variant-numeric: tabular-nums; }
+.mon span { font-size: 12.5px; color: var(--muted); }
+td.num { font-variant-numeric: tabular-nums; font-family: var(--mono); font-size: 13px; }
 </style>
 </head>
 <body>
 <div class="wrap">
   <header>
-    <div class="eyebrow">Jarvis · multi-agent news system</div>
+    <div class="eyebrow">Jarvis · multi-agent AI brief</div>
     <h1>Jarvis AI Agent</h1>
-    <p class="lead">Every morning two AI desks read the day's AI and startup news and write a digest for someone breaking into product management. An evaluator on a different model reviews every draft, and a harness written in plain code decides when the work is actually done. This site shows each run with its evidence: what the agents did, what the evaluator rejected, and every check the harness ran.</p>
-    <div class="links"><a href="https://github.com/bsaiprasad13-main/jarvis-ai-agent">Source code on GitHub</a></div>
+    <p class="lead">Every morning two AI desks read the day's AI tools, AI news and India tech news, and write a short brief for engineers who build with AI. An evaluator on a different model reviews every draft, and a harness written in plain code decides when the work is actually done. Below: ask Jarvis about its briefs with a model that runs on your own device, see every run with its evidence, and watch how the system behaves over time.</p>
+    <nav class="nav" aria-label="Sections"><a href="#ask">Ask Jarvis</a><a href="#runs-h">Runs</a><a href="#monitoring">Monitoring</a><a href="https://github.com/bsaiprasad13-main/jarvis-ai-agent">Source code</a></nav>
   </header>
 
   <section>
@@ -144,16 +170,41 @@ footer { margin-top: 56px; padding-top: 18px; border-top: 1px solid var(--line);
       <p>Dashed boxes are plain code. Solid boxes are models.</p>
     </div>
     <div class="flow">
-      <div class="node"><b>Two desk agents</b><span>Global: Product Hunt, Hacker News, TechCrunch, VentureBeat. India: YourStory, Inc42, Business Standard. Each decides what to fetch, which articles to read and when its draft is ready.</span></div>
+      <div class="node"><b>Two desk agents</b><span>Global: Product Hunt, Hacker News, TechCrunch, VentureBeat. India: YourStory, Inc42, Business Standard. Each decides what to fetch, which articles to read, what background to look up on Edgepedia, and when its draft is ready. Reader, sections and desks live in one config file.</span></div>
       <div class="node"><b>Evaluator</b><span>A different model, so nothing grades its own work. Scores each draft 1 to 5 on grounded, specific, relevant, selection and honest, with evidence and exact fixes.</span></div>
       <div class="node code"><b>Done-check</b><span>A desk can't finish until its contract is met. Crashed or half-done work goes to a reserve model, then to the old pipeline.</span></div>
       <div class="node code"><b>Final checks</b><span>Every link was fetched today, nothing repeats, every section is filled or explained, and the email and this site's data were written and read back.</span></div>
     </div>
   </section>
 
+  <section id="ask">
+    <div class="section-head">
+      <div class="eyebrow">Ask Jarvis</div>
+      <h2>Chat with the briefs, on your own device</h2>
+      <p>Jarvis finds the stories that match your question across every run below. Load the small model and it answers in a sentence or two, citing those stories. The model runs in your browser: after a one-time download, nothing you type leaves this page. Code checks every answer, and one that cites no real story is replaced with an honest "that isn't in my briefs".</p>
+    </div>
+    <div class="chat">
+      <form class="chat-row" id="ask-form">
+        <label for="q" class="sr">Your question</label>
+        <input type="text" id="q" placeholder="e.g. What happened with Sarvam AI this week?" autocomplete="off">
+        <button class="btn" type="submit">Ask</button>
+      </form>
+      <div class="engine" id="engine">
+        <select id="model-pick" aria-label="On-device model">
+          <option value="Qwen2.5-1.5B-Instruct-q4f16_1-MLC">Qwen2.5 1.5B · about 0.9 GB</option>
+          <option value="Qwen2.5-0.5B-Instruct-q4f16_1-MLC">Qwen2.5 0.5B · about 0.3 GB, faster, weaker</option>
+        </select>
+        <button class="btn ghost" type="button" id="load-model">Load on-device model</button>
+        <span id="engine-status">Not loaded: answers show the matching stories only.</span>
+        <span class="progress" id="progress" hidden><i></i></span>
+      </div>
+      <div class="answer" id="answer" aria-live="polite"></div>
+    </div>
+  </section>
+
   <section>
     <div class="section-head">
-      <div class="eyebrow">Runs</div>
+      <div class="eyebrow" id="runs-h">Runs</div>
       <h2>Pick a run</h2>
     </div>
     <div class="runs" id="runs" role="group" aria-label="Runs"><p class="muted">Loading runs…</p></div>
@@ -161,8 +212,18 @@ footer { margin-top: 56px; padding-top: 18px; border-top: 1px solid var(--line);
 
   <div id="run"></div>
 
+  <section id="monitoring">
+    <div class="section-head">
+      <div class="eyebrow">Monitoring</div>
+      <h2>How the system behaves over time</h2>
+      <p>Computed in your browser from every agent run on this site: model latency and failures, how often the evaluator sends work back, and what the harness caught.</p>
+    </div>
+    <div id="mon"><p class="muted">Loading…</p></div>
+  </section>
+
   <footer>
-    <p>Built with Python, Gemini function calling and GitHub Actions. Runs every morning; this page reads the saved run files directly.</p>
+    <p>Built with Python, Gemini function calling, the Edgepedia API and GitHub Actions; the chat runs on WebLLM. Runs every morning at 10:00 IST; this page reads the saved run files directly.</p>
+    <p>Background summaries come from <a href="https://www.edgepedia.org">Edgepedia</a>.</p>
   </footer>
 </div>
 
@@ -170,7 +231,7 @@ footer { margin-top: 56px; padding-top: 18px; border-top: 1px solid var(--line);
 (function () {
   const $ = (id) => document.getElementById(id);
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
-  const SECTIONS = [["section_1_tools", "AI tools for PMs"], ["section_2_ai_news", "AI industry news"], ["section_3_india_news", "India startup & company news"]];
+  const SECTIONS = [["section_1_tools", "AI & developer tools"], ["section_2_ai_news", "AI industry news"], ["section_3_india_news", "India tech & startups"]];
   const DIMS = ["grounded", "specific", "relevant", "selection", "honest"];
   let index = [];
 
@@ -193,7 +254,7 @@ footer { margin-top: 56px; padding-top: 18px; border-top: 1px solid var(--line);
     $("runs").querySelectorAll("button").forEach((b) => b.addEventListener("click", () => { location.hash = "r-" + b.dataset.id; }));
   }
 
-  function digestHtml(email) {
+  function digestHtml(email, titlesOnly) {
     const notes = email.section_notes || {};
     return `<div class="digest">${SECTIONS.map(([key, title], n) => {
       const rows = email[key] || [];
@@ -201,7 +262,8 @@ footer { margin-top: 56px; padding-top: 18px; border-top: 1px solid var(--line);
       return `<div class="dsec"><h3>${title}</h3>${rows.length ? `<div class="items">${rows.map((p) => `<article class="item">
         ${p.link ? `<a class="t" href="${esc(p.link)}" target="_blank" rel="noopener">${esc(p.title)}</a>` : `<span class="t" style="font-weight:600">${esc(p.title)}</span>`}
         <div class="src">${esc(p.source || "")}${p.read ? '<span class="badge">read in full</span>' : ""}</div>
-        <p>${esc(p.why_it_matters)}</p></article>`).join("")}</div>` : ""}${msg ? `<p class="note">${esc(msg)}</p>` : (!rows.length ? '<p class="note">Nothing in this section.</p>' : "")}</div>`;
+        ${titlesOnly ? "" : `<p>${esc(p.why_it_matters)}</p>`}
+        ${p.background ? `<div class="bg">Background: <a href="${esc(p.background.url)}" target="_blank" rel="noopener">${esc(p.background.title)}</a> · Edgepedia</div>` : ""}</article>`).join("")}</div>` : ""}${msg ? `<p class="note">${esc(msg)}</p>` : (!rows.length ? '<p class="note">Nothing in this section.</p>' : "")}</div>`;
     }).join("")}</div>`;
   }
 
@@ -246,11 +308,11 @@ footer { margin-top: 56px; padding-top: 18px; border-top: 1px solid var(--line);
     renderPicker(entry.id);
     $("run").innerHTML = '<section><p class="muted">Loading run…</p></section>';
     let rec;
-    try { rec = await (await fetch(entry.file)).json(); }
+    try { rec = await load(entry); }
     catch (e) { $("run").innerHTML = '<section><p class="note">This run file could not be loaded. Try another run.</p></section>'; return; }
     if (rec.kind === "pipeline") {
       $("run").innerHTML = `<section><div class="section-head"><div class="eyebrow">Before · ${esc(when(rec.id))}</div>
-        <h2>The old pipeline's email</h2><p>${esc(rec.note || "One model call over the headlines, no reading, no review. Shown for comparison.")}</p></div>${digestHtml(rec.email)}</section>`;
+        <h2>The old pipeline's email</h2><p>${esc(rec.note || "One model call over the headlines, no reading, no review. Shown for comparison.")} It was written for a different reader, so only the picks are shown.</p></div>${digestHtml(rec.email, true)}</section>`;
       return;
     }
     const t = rec.trace, finals = t.report_card.filter((c) => c.final !== false);
@@ -272,12 +334,173 @@ footer { margin-top: 56px; padding-top: 18px; border-top: 1px solid var(--line);
         ${reportHtml(t.report_card)}</section>`;
   }
 
+  // ---------------------------------------------------------------- data
+  const records = {};
+  async function load(entry) {
+    if (!records[entry.id]) records[entry.id] = fetch(entry.file).then((r) => r.json());
+    return records[entry.id];
+  }
+
+  // ---------------------------------------------------------- monitoring
+  function pct(n, d) { return d ? Math.round((100 * n) / d) + "%" : "–"; }
+  function quantile(xs, q) { if (!xs.length) return null; const a = xs.slice().sort((x, y) => x - y); return a[Math.min(a.length - 1, Math.floor(q * a.length))]; }
+  function renderMonitoring(recs) {
+    const agent = recs.filter((r) => r.kind === "agent");
+    if (!agent.length) { $("mon").innerHTML = '<p class="note">No agent runs yet.</p>'; return; }
+    const calls = agent.flatMap((r) => r.trace.model_calls || []);
+    const byModel = {};
+    calls.forEach((c) => { (byModel[c.model] = byModel[c.model] || []).push(c); });
+    const attempts = agent.flatMap((r) => r.trace.desks.flatMap((d) => d.attempts));
+    const drafts = attempts.flatMap((a) => a.drafts || []);
+    const firsts = attempts.filter((a) => (a.drafts || []).length).map((a) => a.drafts[0]);
+    const retried = agent.flatMap((r) => r.trace.report_card.filter((c) => c.final === false && !c.passed));
+    const ruleCatches = drafts.flatMap((d) => d.rule_errors || []);
+    const lowGrounded = drafts.filter((d) => (d.rubric?.grounded?.score || 5) < 3).length;
+    const refusals = attempts.reduce((n, a) => n + (a.finish_refusals || 0), 0);
+    const lookups = attempts.reduce((n, a) => n + (a.lookups || []).length, 0);
+    const secs = agent.map((r) => r.trace.seconds);
+    const tiles = [
+      [agent.length, "agent runs"],
+      [pct(firsts.filter((d) => d.accepted).length, firsts.length), "first drafts accepted by the evaluator"],
+      [retried.length, "failures recovered automatically"],
+      [Math.round(secs.reduce((a, b) => a + b, 0) / secs.length) + "s", "average run time"],
+    ];
+    const rows = Object.entries(byModel).map(([m, cs]) => {
+      const ok = cs.filter((c) => c.ok).map((c) => c.ms);
+      return `<tr><td><code>${esc(m)}</code></td><td class="num">${cs.length}</td><td class="num">${pct(ok.length, cs.length)}</td>
+        <td class="num">${ok.length ? (quantile(ok, 0.5) / 1000).toFixed(1) + "s" : "–"}</td><td class="num">${ok.length ? (quantile(ok, 0.95) / 1000).toFixed(1) + "s" : "–"}</td>
+        <td class="ev">${esc([...new Set(cs.filter((c) => !c.ok).map((c) => c.status || "network"))].join(", "))}</td></tr>`;
+    }).join("");
+    const caught = [
+      [ruleCatches.filter((e) => /read in full/.test(e)).length, "drafts sent back for being written from headlines alone"],
+      [ruleCatches.filter((e) => /does not exist|background must/.test(e)).length, "made-up story ids or background links blocked"],
+      [lowGrounded, "drafts the evaluator scored under 3 for grounding (claims the article didn't support)"],
+      [drafts.filter((d) => !d.accepted).length, "drafts rejected in total, each returned with exact fixes"],
+      [refusals, "early 'finish' calls refused by the done-check"],
+      [lookups, "Edgepedia background lookups"],
+    ];
+    $("mon").innerHTML = `<div class="mon">${tiles.map(([b, t]) => `<div><b>${esc(b)}</b><span>${esc(t)}</span></div>`).join("")}</div>
+      <h3>Model calls</h3>
+      ${rows ? `<div class="table-wrap"><table><thead><tr><th>Model</th><th>Calls</th><th>Succeeded</th><th>Median</th><th>p95</th><th>Failure codes</th></tr></thead><tbody>${rows}</tbody></table></div>` : '<p class="note">Per-call timing starts with newer runs.</p>'}
+      <h3>What the harness and evaluator caught</h3>
+      <div class="table-wrap"><table><tbody>${caught.map(([n, t]) => `<tr><td class="num" style="width:60px">${n}</td><td>${esc(t)}</td></tr>`).join("")}</tbody></table></div>`;
+  }
+
+  // ------------------------------------------------------- ask jarvis (RAG)
+  const STOP = new Set("a an and are as at be by did do does for from has have how i in is it its me of on or so that the their this to was were what when where which who why will with you your about any new latest week today".split(" "));
+  const words = (t) => String(t || "").toLowerCase().split(/[^a-z0-9.+#]+/).filter((w) => w.length > 1 && !STOP.has(w));
+  let corpus = [], df = {}, avgLen = 1;
+  function buildCorpus(recs) {
+    const seen = new Map();
+    recs.forEach((r) => SECTIONS.forEach(([k]) => (r.email[k] || []).forEach((p) => {
+      const doc = { title: p.title, source: p.source, link: p.link, why: r.kind === "agent" ? p.why_it_matters : "",
+        background: p.background, when: when(r.id), runId: r.id };
+      seen.set(p.title.toLowerCase(), doc);                    // later runs win
+    })));
+    corpus = [...seen.values()].map((d) => ({ ...d, toks: words(`${d.title} ${d.title} ${d.source} ${d.why} ${d.background?.title || ""}`) }));
+    df = {};
+    corpus.forEach((d) => new Set(d.toks).forEach((w) => (df[w] = (df[w] || 0) + 1)));
+    avgLen = corpus.reduce((n, d) => n + d.toks.length, 0) / Math.max(1, corpus.length);
+  }
+  function search(q, k = 5) {
+    const qs = words(q), N = corpus.length;
+    return corpus.map((d) => {
+      let score = 0;
+      qs.forEach((w) => {
+        const f = d.toks.filter((t) => t === w).length;
+        if (!f) return;
+        const idf = Math.log(1 + (N - df[w] + 0.5) / (df[w] + 0.5));
+        score += idf * (f * 2.2) / (f + 1.2 * (0.25 + 0.75 * d.toks.length / avgLen));
+      });
+      return { d, score };
+    }).filter((x) => x.score > 0).sort((a, b) => b.score - a.score).slice(0, k).map((x) => x.d);
+  }
+  function citeList(hits) {
+    return `<ol class="cites">${hits.map((d) => `<li>${d.link ? `<a href="${esc(d.link)}" target="_blank" rel="noopener">${esc(d.title)}</a>` : esc(d.title)} <span class="muted">· ${esc(d.source)} · ${esc(d.when)}</span></li>`).join("")}</ol>`;
+  }
+
+  let engine = null, busy = false;
+  async function loadModel() {
+    const btn = $("load-model"), status = $("engine-status"), bar = $("progress");
+    if (!("gpu" in navigator) || !(await navigator.gpu.requestAdapter().catch(() => null))) {
+      status.textContent = "This browser has no WebGPU, so the on-device model can't run here. Matching stories still work.";
+      btn.disabled = true; return;
+    }
+    btn.disabled = true; $("model-pick").disabled = true; bar.hidden = false;
+    try {
+      const webllm = await import("https://cdn.jsdelivr.net/npm/@mlc-ai/web-llm@0.2.88/+esm");
+      const model = $("model-pick").value;
+      engine = await webllm.CreateMLCEngine(model, { initProgressCallback: (r) => {
+        bar.firstElementChild.style.width = Math.round((r.progress || 0) * 100) + "%";
+        status.textContent = r.text.length > 90 ? r.text.slice(0, 90) + "…" : r.text;
+      } });
+      bar.hidden = true;
+      status.textContent = `Ready: ${model.split("-q4")[0]} running on your device.`;
+    } catch (e) {
+      bar.hidden = true; btn.disabled = false; $("model-pick").disabled = false;
+      status.textContent = "The model could not load on this device (" + (e && e.message ? e.message.slice(0, 80) : "unknown error") + "). Matching stories still work.";
+    }
+  }
+
+  async function ask(q) {
+    if (busy || !q.trim()) return;
+    const hits = search(q);
+    const out = $("answer");
+    if (!hits.length) {
+      out.innerHTML = `<div class="bubble">That isn't in my briefs. Try a company, tool or topic from the runs below.</div>`;
+      return;
+    }
+    if (!engine) {
+      out.innerHTML = `<p class="muted" style="font-size:14px">Matching stories from Jarvis's briefs. Load the on-device model for a written answer.</p>${citeList(hits)}`;
+      return;
+    }
+    busy = true;
+    out.innerHTML = `<div class="bubble" id="bubble">…</div><p class="stats-line" id="check"></p>${citeList(hits)}`;
+    const ctx = hits.map((d, i) => `[${i + 1}] (${d.when}, ${d.source}) ${d.title}${d.why ? " — " + d.why : ""}${d.background ? " Background: " + d.background.title : ""}`).join("\n");
+    const messages = [
+      { role: "system", content: "You are Jarvis, answering questions about Jarvis's daily AI briefs. Use ONLY the numbered stories given. Cite every claim with its story number in square brackets, like [2]. If the stories do not answer the question, reply exactly: NOT_IN_BRIEFS. Answer in two or three short, plain sentences." },
+      { role: "user", content: `Stories:\n${ctx}\n\nQuestion: ${q}` },
+    ];
+    const t0 = performance.now();
+    let first = null, text = "", chunks = 0;
+    try {
+      const stream = await engine.chat.completions.create({ messages, stream: true, temperature: 0.2, max_tokens: 220 });
+      for await (const part of stream) {
+        const delta = part.choices?.[0]?.delta?.content || "";
+        if (delta) { if (first === null) first = performance.now(); text += delta; chunks++; $("bubble").textContent = text; }
+      }
+    } catch (e) { text = ""; }
+    const secs = (performance.now() - (first || t0)) / 1000;
+    // harness check on the answer: only citations to the stories shown are allowed
+    const cited = [...text.matchAll(/\[(\d+)\]/g)].map((m) => +m[1]);
+    const valid = [...new Set(cited.filter((n) => n >= 1 && n <= hits.length))];
+    let verdict;
+    if (/NOT_IN_BRIEFS/.test(text) || !text.trim()) {
+      $("bubble").textContent = "That isn't covered in my briefs. The closest stories are below.";
+      verdict = "Check: the model said the briefs don't answer this, so nothing was made up.";
+    } else if (!valid.length) {
+      $("bubble").textContent = "I couldn't answer that from my briefs with a source, so I won't guess. The closest stories are below.";
+      verdict = "Check failed: the answer cited no story, so code replaced it.";
+    } else {
+      $("bubble").textContent = text.replace(/\[(\d+)\]/g, (m, n) => (+n >= 1 && +n <= hits.length ? m : "")).trim();
+      verdict = `Check passed: every citation points to a story below (${valid.map((n) => "[" + n + "]").join(" ")}).`;
+    }
+    $("check").textContent = `${verdict} First token ${Math.round((first || performance.now()) - t0)} ms · about ${Math.round(chunks / Math.max(secs, 0.01))} tokens/s · on your device.`;
+    busy = false;
+  }
+
   async function boot() {
     try { index = await (await fetch("data/index.json")).json(); }
     catch (e) { $("runs").innerHTML = '<p class="note">No runs published yet.</p>'; return; }
-    const route = () => show(location.hash.startsWith("#r-") ? location.hash.slice(3) : (index.filter((r) => r.kind !== "pipeline").pop() || {}).id);
+    const latest = (index.filter((r) => r.kind !== "pipeline").pop() || index[index.length - 1] || {}).id;
+    const route = () => { if (location.hash.startsWith("#r-")) show(location.hash.slice(3)); };
     window.addEventListener("hashchange", route);
-    route();
+    if (location.hash.startsWith("#r-")) route(); else show(latest);
+    const recs = (await Promise.all(index.map((e) => load(e).catch(() => null)))).filter(Boolean);
+    renderMonitoring(recs);
+    buildCorpus(recs);
+    $("ask-form").addEventListener("submit", (e) => { e.preventDefault(); ask($("q").value); });
+    $("load-model").addEventListener("click", loadModel);
   }
   boot();
 })();

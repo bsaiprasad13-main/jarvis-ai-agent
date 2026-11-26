@@ -194,6 +194,13 @@ res = tools.finish(fresh, "done")
 check("finish refused before any work", "not done yet" in res["error"] and fresh.done is False
       and any("never fetched YourStory" in m for m in res["missing"]))
 check("refusal says exactly what is missing", any("No draft submitted" in m for m in res["missing"]))
+lazy = tools.RunState(new_memory(), evaluator.review, GLOBAL)
+for n in GLOBAL.sources:
+    tools.fetch_source(lazy, n)
+lazy.accepted = {"tools": [], "ai_news": [], "notes": {"tools": {"status": "quiet", "message": "slow day"},
+                                                       "ai_news": {"status": "quiet", "message": "slow day"}}}
+check("an empty 'quiet' section is refused when there were enough stories",
+      any("candidate stories" in m for m in tools.done_check(lazy)))
 
 # --- 4. full run: writer fixes a rejected draft; premature finish refused ---
 SCRIPTS.update({("global", "writer"): global_script(), ("india", "writer"): india_script()})
@@ -261,6 +268,33 @@ d0 = trace["desks"][0]["attempts"][0]["drafts"][0]
 check("evaluator outage is visible in the trace",
       d0["evaluator_model"] == EVALUATOR_BACKUP and d0["independent"] is (EVALUATOR_BACKUP != DESK_MODEL))
 FAKE_EVALUATOR_DOWN = False
+
+# --- 8b. evaluator returns broken JSON -> next evaluator; total outage costs no draft
+calls_before = len(EVAL_CALLS)
+real_fake = gemini.ask_json
+def broken_first(model, prompt, system=None, tries=5):
+    if model == EVALUATOR_MODELS[0]:
+        raise ValueError("Expecting value: line 1 column 1")
+    return real_fake(model, prompt, system, tries)
+gemini.ask_json = broken_first
+rs = tools.RunState(new_memory(), evaluator.review, INDIA, model=DESK_MODEL)
+for n in INDIA.sources:
+    tools.fetch_source(rs, n)
+for i in ("i1", "i2"):
+    tools.read_article(rs, i)
+ok_draft = {"india_news": [{"item_id": "i1", "title": "x", "why_it_matters": WHY}, {"item_id": "i2", "title": "y", "why_it_matters": WHY}],
+            "notes": {"india_news": {"status": "normal", "message": ""}}}
+r1 = tools.submit_sections(rs, **ok_draft)
+check("broken evaluator JSON falls through to the next evaluator", r1["accepted"] and rs.drafts[0]["review"]["evaluator_model"] != EVALUATOR_MODELS[0])
+gemini.ask_json = lambda *a, **k: (_ for _ in ()).throw(gemini.GeminiError("HTTP 503"))
+rs2 = tools.RunState(new_memory(), evaluator.review, INDIA, model=DESK_MODEL)
+for n in INDIA.sources:
+    tools.fetch_source(rs2, n)
+for i in ("i1", "i2"):
+    tools.read_article(rs2, i)
+r2 = tools.submit_sections(rs2, **ok_draft)
+check("total evaluator outage does not use up a draft", r2.get("evaluator_unavailable") and rs2.drafts == [])
+gemini.ask_json = real_fake
 
 # --- 9. email + website data -------------------------------------------------
 html = email_sender.render_email_html(email, trace)

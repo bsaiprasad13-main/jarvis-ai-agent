@@ -1,32 +1,32 @@
 {
  "id": "2026-11-26_1000",
  "kind": "pipeline",
- "note": "The original Jarvis pipeline's real 10:00 email: one Gemini call over headlines, no articles read, no review. Links were not kept in the saved copy of the email, so titles are shown without them. Repeats from the day before: 'Even the best AI agents struggle with everyday life' and 'Maple raises $5.3M'.",
+ "note": "The original Jarvis pipeline's real 10:00 email: one Gemini call over headlines, no articles read, no review. Links were not kept in the saved copy of the email, so titles are shown without them. Explanations were written for a different reader and are left out. Repeats from the day before: 'Even the best AI agents struggle with everyday life' and 'Maple raises $5.3M'.",
  "email": {
   "section_1_tools": [
    {
     "title": "MyClaw 3.0 - Build an always-on AI team with shared memory",
     "source": "Product Hunt",
     "link": null,
-    "why_it_matters": "As a PM, you will often need to coordinate multiple workstreams. This tool helps you see how shared-memory AI teams work together, giving you ideas for automating your own workflows."
+    "why_it_matters": ""
    },
    {
     "title": "Airbot - The AI chief of staff that texts you first",
     "source": "Product Hunt",
     "link": null,
-    "why_it_matters": "PMs live by task management and staying on top of priorities. Testing proactive AI assistants gives you a firsthand look at conversational UX patterns you might build into your own products."
+    "why_it_matters": ""
    },
    {
     "title": "Hiring Right Now - Which startups would hire you?",
     "source": "Product Hunt",
     "link": null,
-    "why_it_matters": "Since you are actively hunting for APM roles as a fresher, this tool helps you discover active startups that are hiring right now so you can target your applications."
+    "why_it_matters": ""
    },
    {
     "title": "Falcon by Vybe - Falcon analyzes your competitors for free, then gets to work",
     "source": "Product Hunt",
     "link": null,
-    "why_it_matters": "Competitor analysis is a core PM skill for writing PRDs and strategy docs. This tool automates that research, showing you how AI can speed up market analysis."
+    "why_it_matters": ""
    }
   ],
   "section_2_ai_news": [
@@ -34,25 +34,25 @@
     "title": "OpenAI says heavy ChatGPT users may hit limits sooner as it merges Chat and Work",
     "source": "TechCrunch",
     "link": null,
-    "why_it_matters": "Watching how major product teams handle feature merges, user limits, and scaling tradeoffs is a great real-world case study for your PM interviews."
+    "why_it_matters": ""
    },
    {
     "title": "Anthropic shares fall below IPO price, a worrying sign for AI startups",
     "source": "TechCrunch",
     "link": null,
-    "why_it_matters": "Understanding market sentiment and financial pressures in the AI industry helps you talk smartly about business models and unit economics during company interviews."
+    "why_it_matters": ""
    },
    {
     "title": "Even the best AI agents struggle with everyday life",
     "source": "TechCrunch",
     "link": null,
-    "why_it_matters": "As an aspiring PM working with AI features, understanding current user experience pain points and product limitations will help you scope realistic MVPs."
+    "why_it_matters": ""
    },
    {
     "title": "Maple raises $5.3M to build AI products that protect your data, even from itself",
     "source": "TechCrunch",
     "link": null,
-    "why_it_matters": "Data privacy is a massive challenge for modern product builders. Seeing how early-stage startups tackle security gives you talking points on handling user trust."
+    "why_it_matters": ""
    }
   ],
   "section_3_india_news": [
@@ -60,25 +60,25 @@
     "title": "PhonePe resumes IPO process; targets listing in Feb-March at $12-15B valuation",
     "source": "YourStory",
     "link": null,
-    "why_it_matters": "Fintech giants driving toward massive public listings indicate where major product scaling and hiring budgets will flow in the Indian ecosystem."
+    "why_it_matters": ""
    },
    {
     "title": "Flipkart CEO Kalyan Krishnamurthy to exit after over 11 years",
     "source": "YourStory",
     "link": null,
-    "why_it_matters": "Leadership shifts at India's top e-commerce players often trigger strategy resets and organizational re-alignments that affect product team roadmaps."
+    "why_it_matters": ""
    },
    {
     "title": "[Update] Anthropic Rolls Out Claude Duet In India After US Launch",
     "source": "Inc42",
     "link": null,
-    "why_it_matters": "Global AI giants expanding their product suites directly into India means new tools to experiment with and local market adoption trends to track."
+    "why_it_matters": ""
    },
    {
     "title": "Vegapay Bags $10 Mn To Scale Credit Line On UPI Infrastructure",
     "source": "Inc42",
     "link": null,
-    "why_it_matters": "Watching how early-stage fintech startups secure funding and build niche features on top of UPI provides great inspiration for consumer product design."
+    "why_it_matters": ""
    }
   ],
   "section_notes": {}

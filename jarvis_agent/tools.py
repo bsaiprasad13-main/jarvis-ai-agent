@@ -97,7 +97,11 @@ def done_check(state):
     notes = digest.get("notes") or {}
     for key in desk.sections:
         note = notes.get(key) or {}
-        if not digest.get(key) and not (note.get("status") in ("quiet", "source_issue") and note.get("message")):
+        candidates = sum(1 for i in state.items.values() if i["section"] == key)
+        if not digest.get(key) and candidates >= desk.min_items:
+            missing.append(f"Section {key} is empty but you have {candidates} candidate stories for it. "
+                           "Pick the best ones; 'quiet' is only for days with almost nothing new.")
+        elif not digest.get(key) and not (note.get("status") in ("quiet", "source_issue") and note.get("message")):
             missing.append(f"Section {key} is empty with no explanation. Add items or mark it quiet/source_issue with a reason.")
     return missing
 
@@ -240,6 +244,11 @@ def submit_sections(state, notes=None, **sections):
     if len(state.drafts) >= MAX_DRAFTS:
         return {"error": "draft limit reached. Call finish."}
     review = state.evaluator(state, digest)
+    if review.get("unavailable"):                        # infrastructure problem, not the writer's fault: no draft used
+        state.evaluator_outages = getattr(state, "evaluator_outages", 0) + 1
+        return {"accepted": False, "evaluator_unavailable": True, "rule_errors": review["rule_errors"],
+                "next": "The evaluator is temporarily unavailable. This did not use up a draft. Fix any rule_errors, "
+                        "then call submit_sections again."}
     state.drafts.append({"digest": digest, "review": review,
                          "read_ids": [i for i in state.reads if state.items.get(i, {}).get("article")]})
     if review["accepted"]:
