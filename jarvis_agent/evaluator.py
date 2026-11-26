@@ -9,6 +9,9 @@ Two layers:
 2. A rubric scored by the evaluator model, 1-5 on each dimension, each with
    evidence. A draft passes only with no rule broken, no dimension below 3,
    grounding at 4 or more, and an average of at least 3.5 (shown as 7/10).
+3. A fact check: the model lists each factual claim in a read pick's "why" and
+   says whether the article excerpt supports it. If any claim is unsupported,
+   code caps grounding at 2, whatever score the model gave (measured in evals/).
 """
 from . import gemini, tools
 from .config import EVALUATOR_BACKUP, EVALUATOR_MODELS
@@ -17,7 +20,7 @@ from .desks import READER, SECTION_BRIEFS, TEST_QUESTION
 
 MIN_WORDS, MAX_WORDS = 12, 70
 RUBRIC = {
-    "grounded": "Every 'why' is supported by the article excerpt (where given) or the title. Nothing invented.",
+    "grounded": "Facts only: every 'why' is supported by the article excerpt (where given) or the title. Nothing invented. Relevance and section fit are judged elsewhere, not here.",
     "specific": "Each 'why' names something concrete from the story (a feature, number, decision) and what the reader can learn from it. No generic lines.",
     "relevant": f"Picks pass the reader's test: {TEST_QUESTION}",
     "selection": "The strongest available stories were picked; no clearly better unused candidate was skipped; no filler.",
@@ -107,6 +110,12 @@ Return JSON:
  "issues": [{{"item_id": "<id or null>", "problem": "...", "fix": "..."}}]}}
 List at most 6 issues, most important first. Each fix must say exactly what to change.
 
+FACT CHECK (fill "claims"): for every pick that has an article excerpt, list each specific claim in its
+"why": numbers, amounts, names, investors, customers, results, comparisons ("first", "beats", "only") and
+scope ("all", "permanently", "already"). Set "supported" to true only if the excerpt or title states it;
+a claim that goes beyond the text is false. Judge facts only here, not relevance.
+Add to the JSON: "claims": [{{"item_id": "...", "claim": "...", "supported": true or false}}]
+
 DRAFT:
 {_draft_text(state, digest)}
 
@@ -137,6 +146,16 @@ def llm_review(state, digest):
             score = 1
         rubric[k] = {"score": score, "evidence": str(d.get("evidence", ""))[:400]}
     issues = [i for i in res.get("issues", []) if isinstance(i, dict)][:6]
+    # code decides grounding: any unsupported claim in a pick whose article was read caps it at 2
+    read_ids = {iid for iid, it in state.items.items() if it.get("article")}
+    unsupported = [c for c in res.get("claims") or [] if isinstance(c, dict) and c.get("supported") is False
+                   and str(c.get("item_id")) in read_ids]
+    if unsupported:
+        rubric["grounded"] = {"score": min(rubric["grounded"]["score"], 2),
+                              "evidence": "Not in the article: " + "; ".join(f"{c.get('item_id')}: {c.get('claim')}" for c in unsupported)[:380]}
+        issues = [{"item_id": c.get("item_id"), "problem": f"not supported by the article: {c.get('claim')}",
+                   "fix": "remove it or replace it with what the article says"} for c in unsupported][:3] + issues
+        issues = issues[:6]
     return rubric, issues, model
 
 

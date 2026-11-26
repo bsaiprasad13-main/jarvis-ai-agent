@@ -1,0 +1,187 @@
+{
+ "about": "Labelled drafts for measuring the checker. Companies and numbers are invented for the test, so the model can't answer from memory. Each 'invented' case changes or adds exactly one detail that the article does not support. Global sources (Product Hunt, Hacker News, TechCrunch) are checked as the Global desk, Indian sources as the India desk.",
+ "control": {
+  "title": "Tarangini Labs opens a 40-seat AI research centre in Pune",
+  "source": "YourStory",
+  "article": "Tarangini Labs, a Pune-based startup that builds speech models for Marathi and Hindi, has opened a 40-seat research centre in the city. The company says the centre will focus on making its models run on low-cost Android phones, and it plans to release a free developer kit in March. Founder Meera Kulkarni said most of the hiring will be for machine-learning engineers.",
+  "why": "A Pune startup is hiring ML engineers to make Marathi and Hindi speech models run on cheap Android phones, with a free developer kit planned for March."
+ },
+ "cases": [
+  {
+   "id": "f1",
+   "label": "faithful",
+   "title": "Kavach Pay raises $12M to bring UPI credit to small shops",
+   "source": "Inc42",
+   "article": "Fintech startup Kavach Pay has raised $12 million in a Series A round led by Northfield Capital. The Bengaluru company lets small shops offer short-term credit to customers over UPI, and says it now serves 18,000 merchants across Karnataka and Tamil Nadu. It will use the money to expand to Maharashtra and to build fraud checks.",
+   "why": "Kavach Pay raised $12M led by Northfield Capital to grow UPI credit for small shops, now at 18,000 merchants, with expansion to Maharashtra and new fraud checks next."
+  },
+  {
+   "id": "f2",
+   "label": "faithful",
+   "title": "Nimbus Code launches an open-source agent that writes database migrations",
+   "source": "Hacker News",
+   "article": "Nimbus Code has released Migrata, an open-source agent that reads a database schema and writes migration scripts for PostgreSQL and MySQL. Every script runs first against a temporary copy of the database, and the agent only proposes the change if the copy passes the project's tests. Migrata is MIT-licensed and works with any model that supports function calling.",
+   "why": "Migrata tests every migration on a temporary copy of the database before proposing it, a pattern worth copying for any agent that changes production data."
+  },
+  {
+   "id": "f3",
+   "label": "faithful",
+   "title": "Dhruva Health cuts lab report turnaround to 6 hours with an AI triage model",
+   "source": "Business Standard",
+   "article": "Hyderabad-based Dhruva Health says an AI model that sorts incoming lab samples by urgency has cut its average report turnaround from 20 hours to 6 hours across its 35 labs. Doctors still sign off every report; the model only decides the order in which samples are processed. The company plans to license the system to other diagnostic chains next year.",
+   "why": "Dhruva Health cut lab turnaround from 20 to 6 hours by letting AI only reorder samples by urgency while doctors still sign every report, a safe way to use AI in healthcare."
+  },
+  {
+   "id": "f4",
+   "label": "faithful",
+   "title": "Open model Sutra-7B tops an Indic language benchmark",
+   "source": "TechCrunch",
+   "article": "Sutra-7B, a 7-billion-parameter open model released by the research group IndicNLP Collective, scored highest among open models on the IndicEval benchmark, which covers 11 Indian languages. The model weights are free for commercial use, and the group says it runs on a single consumer GPU with 16 GB of memory.",
+   "why": "Sutra-7B is a free, commercially usable 7B model that led open models on an 11-language Indic benchmark and runs on one 16 GB consumer GPU."
+  },
+  {
+   "id": "f5",
+   "label": "faithful",
+   "title": "Ledgerly adds natural-language search to its accounting app",
+   "source": "Product Hunt",
+   "article": "Ledgerly, an accounting app for freelancers, now lets users search their books in plain English, such as 'how much did I spend on travel in October'. The feature turns the question into a database query, shows the query to the user, and only runs it after they confirm. It is available on the paid plan, which costs $9 a month.",
+   "why": "Ledgerly turns plain-English questions into database queries but shows each query and waits for the user's confirmation before running it, a simple guard against wrong answers."
+  },
+  {
+   "id": "f6",
+   "label": "faithful",
+   "title": "Railways pilot uses computer vision to spot track defects",
+   "source": "Business Standard",
+   "article": "Indian Railways has started a pilot on 400 km of track in the Western zone where cameras mounted on regular trains photograph the rails and a computer-vision model flags possible cracks. Engineers review every flag before any repair is scheduled. The pilot will run for six months before a decision on a wider rollout.",
+   "why": "A six-month Railways pilot uses cameras on regular trains to flag rail cracks on 400 km of track, with engineers checking every flag before repairs."
+  },
+  {
+   "id": "f7",
+   "label": "faithful",
+   "title": "VectorNest releases a vector database that runs inside the browser",
+   "source": "Hacker News",
+   "article": "VectorNest is a new open-source vector database compiled to WebAssembly, so it runs entirely inside a web browser. The authors say it can search 100,000 embeddings in under 20 milliseconds on a laptop, and that no data leaves the user's device. It stores the index in the browser's IndexedDB.",
+   "why": "VectorNest runs vector search fully in the browser through WebAssembly, searching 100,000 embeddings in under 20 ms with no data leaving the device."
+  },
+  {
+   "id": "f8",
+   "label": "faithful",
+   "title": "Shiksha Bot reaches 2 million students with WhatsApp tutoring",
+   "source": "YourStory",
+   "article": "Edtech startup Shiksha Bot says its WhatsApp tutor now has 2 million students, mostly in Classes 8 to 10 in Uttar Pradesh and Bihar. Students send a photo of a maths problem and get a step-by-step hint instead of the full answer. The startup is free for students and earns money from state education departments.",
+   "why": "Shiksha Bot gives step-by-step hints instead of full answers to 2 million students on WhatsApp, and is paid for by state education departments rather than families."
+  },
+  {
+   "id": "f9",
+   "label": "faithful",
+   "title": "Cloud provider Meghraj cuts GPU prices for Indian startups",
+   "source": "Inc42",
+   "article": "Mumbai-based cloud provider Meghraj has cut the hourly price of its H100 GPU instances by 30 percent for startups registered with the government's Startup India programme. The offer runs until June, and startups can reserve up to 64 GPUs each.",
+   "why": "Meghraj cut H100 GPU prices by 30 percent for Startup India companies until June, with up to 64 GPUs each, which lowers the cost of training in India."
+  },
+  {
+   "id": "f10",
+   "label": "faithful",
+   "title": "Promptly adds automatic regression tests for prompts",
+   "source": "Product Hunt",
+   "article": "Promptly, a tool for teams that build with language models, now saves a sample of real conversations and replays them every time a prompt changes. If the new prompt's answers score lower on the team's own checks, the change is blocked. The feature works with OpenAI, Anthropic and Google models.",
+   "why": "Promptly replays saved conversations whenever a prompt changes and blocks the change if answers get worse, turning prompt edits into tested code changes."
+  },
+  {
+   "id": "b1",
+   "label": "invented",
+   "change": "wrong amount",
+   "title": "Kavach Pay raises $12M to bring UPI credit to small shops",
+   "source": "Inc42",
+   "article": "Fintech startup Kavach Pay has raised $12 million in a Series A round led by Northfield Capital. The Bengaluru company lets small shops offer short-term credit to customers over UPI, and says it now serves 18,000 merchants across Karnataka and Tamil Nadu. It will use the money to expand to Maharashtra and to build fraud checks.",
+   "why": "Kavach Pay raised $40M led by Northfield Capital to grow UPI credit for small shops, now at 18,000 merchants, with expansion to Maharashtra and new fraud checks next."
+  },
+  {
+   "id": "b2",
+   "label": "invented",
+   "change": "invented feature",
+   "title": "Nimbus Code launches an open-source agent that writes database migrations",
+   "source": "Hacker News",
+   "article": "Nimbus Code has released Migrata, an open-source agent that reads a database schema and writes migration scripts for PostgreSQL and MySQL. Every script runs first against a temporary copy of the database, and the agent only proposes the change if the copy passes the project's tests. Migrata is MIT-licensed and works with any model that supports function calling.",
+   "why": "Migrata tests every migration on a temporary copy and can roll back a live database automatically within seconds, a pattern worth copying for agents that change production data."
+  },
+  {
+   "id": "b3",
+   "label": "invented",
+   "change": "wrong number",
+   "title": "Dhruva Health cuts lab report turnaround to 6 hours with an AI triage model",
+   "source": "Business Standard",
+   "article": "Hyderabad-based Dhruva Health says an AI model that sorts incoming lab samples by urgency has cut its average report turnaround from 20 hours to 6 hours across its 35 labs. Doctors still sign off every report; the model only decides the order in which samples are processed. The company plans to license the system to other diagnostic chains next year.",
+   "why": "Dhruva Health cut lab turnaround from 20 to 6 hours across its 120 labs by letting AI only reorder samples by urgency while doctors still sign every report."
+  },
+  {
+   "id": "b4",
+   "label": "invented",
+   "change": "false claim of first",
+   "title": "Open model Sutra-7B tops an Indic language benchmark",
+   "source": "TechCrunch",
+   "article": "Sutra-7B, a 7-billion-parameter open model released by the research group IndicNLP Collective, scored highest among open models on the IndicEval benchmark, which covers 11 Indian languages. The model weights are free for commercial use, and the group says it runs on a single consumer GPU with 16 GB of memory.",
+   "why": "Sutra-7B beat every model, including GPT-class closed models, on an 11-language Indic benchmark, and it is free for commercial use on one 16 GB GPU."
+  },
+  {
+   "id": "b5",
+   "label": "invented",
+   "change": "removed the safety step",
+   "title": "Ledgerly adds natural-language search to its accounting app",
+   "source": "Product Hunt",
+   "article": "Ledgerly, an accounting app for freelancers, now lets users search their books in plain English, such as 'how much did I spend on travel in October'. The feature turns the question into a database query, shows the query to the user, and only runs it after they confirm. It is available on the paid plan, which costs $9 a month.",
+   "why": "Ledgerly turns plain-English questions into database queries and runs them instantly with no confirmation step, which makes it fast for freelancers on the free plan."
+  },
+  {
+   "id": "b6",
+   "label": "invented",
+   "change": "invented outcome",
+   "title": "Railways pilot uses computer vision to spot track defects",
+   "source": "Business Standard",
+   "article": "Indian Railways has started a pilot on 400 km of track in the Western zone where cameras mounted on regular trains photograph the rails and a computer-vision model flags possible cracks. Engineers review every flag before any repair is scheduled. The pilot will run for six months before a decision on a wider rollout.",
+   "why": "A Railways pilot on 400 km of track has already cut derailments by half by letting cameras on regular trains flag rail cracks for engineers."
+  },
+  {
+   "id": "b7",
+   "label": "invented",
+   "change": "wrong speed",
+   "title": "VectorNest releases a vector database that runs inside the browser",
+   "source": "Hacker News",
+   "article": "VectorNest is a new open-source vector database compiled to WebAssembly, so it runs entirely inside a web browser. The authors say it can search 100,000 embeddings in under 20 milliseconds on a laptop, and that no data leaves the user's device. It stores the index in the browser's IndexedDB.",
+   "why": "VectorNest runs vector search fully in the browser through WebAssembly, searching 10 million embeddings in under 20 ms with no data leaving the device."
+  },
+  {
+   "id": "b8",
+   "label": "invented",
+   "change": "invented investor",
+   "title": "Shiksha Bot reaches 2 million students with WhatsApp tutoring",
+   "source": "YourStory",
+   "article": "Edtech startup Shiksha Bot says its WhatsApp tutor now has 2 million students, mostly in Classes 8 to 10 in Uttar Pradesh and Bihar. Students send a photo of a maths problem and get a step-by-step hint instead of the full answer. The startup is free for students and earns money from state education departments.",
+   "why": "Shiksha Bot, backed by a fresh Google investment, gives step-by-step hints to 2 million students on WhatsApp and is paid for by state education departments."
+  },
+  {
+   "id": "b9",
+   "label": "invented",
+   "change": "wrong scope",
+   "title": "Cloud provider Meghraj cuts GPU prices for Indian startups",
+   "source": "Inc42",
+   "article": "Mumbai-based cloud provider Meghraj has cut the hourly price of its H100 GPU instances by 30 percent for startups registered with the government's Startup India programme. The offer runs until June, and startups can reserve up to 64 GPUs each.",
+   "why": "Meghraj cut H100 GPU prices by 30 percent permanently for all customers, with up to 64 GPUs each, which lowers the cost of training in India."
+  },
+  {
+   "id": "b10",
+   "label": "invented",
+   "change": "wrong vendor list",
+   "title": "Promptly adds automatic regression tests for prompts",
+   "source": "Product Hunt",
+   "article": "Promptly, a tool for teams that build with language models, now saves a sample of real conversations and replays them every time a prompt changes. If the new prompt's answers score lower on the team's own checks, the change is blocked. The feature works with OpenAI, Anthropic and Google models.",
+   "why": "Promptly replays saved conversations whenever a prompt changes and blocks worse answers; it only works with OpenAI models for now, so other teams must wait."
+  }
+ ],
+ "control_global": {
+  "title": "Fieldnote ships an offline meeting recorder that summarises on the laptop",
+  "source": "Product Hunt",
+  "article": "Fieldnote is a meeting recorder for Mac and Windows that transcribes and summarises meetings entirely on the user's laptop, using a small open speech model and a 3-billion-parameter language model. Nothing is uploaded unless the user exports a summary. The app is free for meetings up to 30 minutes, and a $6 monthly plan removes the limit.",
+  "why": "Fieldnote records, transcribes and summarises meetings fully on the laptop with small open models, so nothing is uploaded, and it is free for meetings up to 30 minutes."
+ }
+}

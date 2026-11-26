@@ -5,6 +5,7 @@ Kept from v1 and reused by the agents' fetch_source tool and by the fallback pip
 If a site blocks direct feed requests, fetch_rss retries through the public rss2json relay.
 """
 import datetime
+import logging
 import os
 import urllib.parse
 import xml.etree.ElementTree as ET
@@ -13,6 +14,8 @@ from email.utils import parsedate_to_datetime
 import requests
 
 from . import config  # noqa: F401  (loads .env before the token is read)
+
+log = logging.getLogger(__name__)
 
 def get_utc_now():
     return datetime.datetime.now(datetime.timezone.utc)
@@ -36,7 +39,7 @@ def get_session():
 def fetch_product_hunt(last_run_utc):
     token = os.environ.get("PRODUCT_HUNT_DEVELOPER_TOKEN")
     if not token:
-        print("Warning: PRODUCT_HUNT_DEVELOPER_TOKEN not set.")
+        log.warning("PRODUCT_HUNT_DEVELOPER_TOKEN is not set")
         return [], False
 
     url = "https://api.producthunt.com/v2/api/graphql"
@@ -96,9 +99,9 @@ def fetch_product_hunt(last_run_utc):
                     })
             success = True
         else:
-            print(f"Product Hunt API failed: {response.status_code}")
+            log.warning(f"Product Hunt API failed: {response.status_code}")
     except Exception as e:
-        print(f"Error fetching Product Hunt: {e}")
+        log.warning(f"Error fetching Product Hunt: {e}")
 
     return items, success
 
@@ -129,9 +132,9 @@ def fetch_hacker_news(last_run_utc):
                         })
             success = True
         else:
-             print(f"Hacker News API failed: {response.status_code}")
+            log.warning(f"Hacker News API failed: {response.status_code}")
     except Exception as e:
-        print(f"Error fetching Hacker News: {e}")
+        log.warning(f"Error fetching Hacker News: {e}")
 
     return items, success
 
@@ -219,7 +222,7 @@ def fetch_rss(source_name, feed_url, section, last_run_utc):
 
             # Fallback to rss2json proxy if rate-limited or blocked
             if resp.status_code in [403, 429, 503]:
-                print(f"Direct fetch blocked ({resp.status_code}) for {url}. Attempting rss2json proxy...")
+                log.info(f"Direct fetch blocked ({resp.status_code}) for {url}; retrying through rss2json")
                 proxy_url = f"https://api.rss2json.com/v1/api.json?rss_url={urllib.parse.quote(url)}"
                 proxy_resp = session.get(proxy_url, timeout=15)
 
@@ -272,7 +275,7 @@ def fetch_rss(source_name, feed_url, section, last_run_utc):
             continue
 
     if not success:
-        print(f"Failed to fetch RSS for {source_name}")
+        log.warning(f"Failed to fetch RSS for {source_name}")
 
     return items, success, new_url
 

@@ -328,6 +328,17 @@ for i in ("i1", "i2"):
 rv = evaluator.review(gs, {"india_news": [{"item_id": "i1", "title": "x", "why_it_matters": WHY}, {"item_id": "i2", "title": "y", "why_it_matters": WHY}],
                            "notes": {}})
 check("grounding below 4 fails the draft even with a high average", rv["score"] >= 8 and not rv["accepted"])
+gemini.ask_json = lambda *a, **k: {"rubric": {d: {"score": 5} for d in evaluator.RUBRIC}, "issues": [],
+                                   "claims": [{"item_id": "i1", "claim": "raised $40M", "supported": False}]}
+rv = evaluator.review(gs, {"india_news": [{"item_id": "i1", "title": "x", "why_it_matters": WHY}, {"item_id": "i2", "title": "y", "why_it_matters": WHY}],
+                           "notes": {}})
+check("a claim the article doesn't support caps grounding at 2, even if the model scored it 5",
+      rv["rubric"]["grounded"]["score"] == 2 and not rv["accepted"] and "raised $40M" in rv["issues"][0]["problem"])
+cases = json.load(open(os.path.join(ROOT, "evals", "checker_cases.json"), encoding="utf-8"))
+labels = [c["label"] for c in cases["cases"]]
+check("the checker test set is balanced and every article fits in the checker's 500-character view",
+      labels.count("faithful") == labels.count("invented") == 10
+      and all(len(c["article"]) <= 500 for c in cases["cases"] + [cases["control"], cases["control_global"]]))
 gemini.ask_json = real
 
 check("evaluator is told which sections the desk owns", "owns ONLY these sections: india_news" in evaluator._prompt(gs, {"india_news": [], "notes": {}}))

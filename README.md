@@ -4,7 +4,7 @@
 Two AI agents research and write, a different AI model reviews their drafts, and plain code decides when the work is
 really done. Nothing reaches the website until it passes every check.
 
-[**Live site**](https://bsaiprasad13-main.github.io/jarvis-ai-agent/) · Runs daily at 10:00 IST on **Zoho Catalyst** · **66 offline tests** · MIT license
+[**Live site**](https://bsaiprasad13-main.github.io/jarvis-ai-agent/) · Runs daily at 10:00 IST on **Zoho Catalyst** · **68 offline tests** · **checker catches 10/10 invented details** ([measured](evals/)) · MIT license
 
 ![The Jarvis website: today's report with its checks, and the Ask Jarvis panel](docs/site.png)
 
@@ -22,11 +22,11 @@ really done. Nothing reaches the website until it passes every check.
 |---|---|
 | **Agents, function calling, tools** | Two Gemini desk agents with 7 tools each decide what to fetch, read, look up and submit (`jarvis_agent/agent.py`, `tools.py`) |
 | **Prompt engineering and context management** | System prompts and the checker's rubric are built from one spec (`jarvis.config.json`); the checker is told exactly which sections each desk owns; lessons carry over to the next day |
-| **RAG and reducing hallucinations** | Desks must read the article before explaining it; agent writers see story IDs, never URLs, so they can't invent links; background comes from a real lookup in Edgepedia (a free encyclopedia API); the chat answers only from retrieved stories and must cite them |
+| **RAG and reducing hallucinations** | Desks must read the article before explaining it; agent writers see story IDs, never URLs, so they can't invent links; background comes from a real lookup in Edgepedia (a free encyclopedia API); the chat answers only from retrieved stories and must cite them. **Measured:** the checker catches 10/10 invented details in a labelled test set, up from 4/10 ([evals](evals/)) |
 | **Edge-case handling** | Early "finish", crashes, half-done work, model outages and quota limits each have a fixed route in code, and each has a test |
 | **End-to-end deployment** | Spec → prompts and tools → offline tests → test runs with fault injection → production on Zoho Catalyst → alerts and a 10:30 watchdog |
 | **Integrations** | Gemini, Product Hunt GraphQL, Hacker News API, RSS feeds, Edgepedia API, Resend email, Zoho Catalyst (Job Scheduling, Stratus), GitHub Pages |
-| **Tuning from logs and latency** | Every model call is timed and logged with its report; each fix in section 5 came from reading run traces |
+| **Tuning from logs and latency** | Every model call is timed and logged with its report; each fix in section 5 came from reading run traces; the checker's prompt change was measured before and after (p50 3.0 s per check) |
 | **On-device inference** | The optional chat model runs in the visitor's browser on WebGPU and reports time to first word |
 
 ## 1. How it works
@@ -56,7 +56,7 @@ really done. Nothing reaches the website until it passes every check.
 | Part | What it does | Where |
 |---|---|---|
 | **Desk agents** | Gemini with function calling and 7 tools. Each desk owns its own sources and sections and decides what to fetch, what to read in full, what to look up, and when its draft is ready. | `jarvis_agent/agent.py`, `tools.py` |
-| **Checker** | A *different* model in a fresh context scores each draft on grounded, specific, relevant, best picks and honest, with evidence, and returns exact fixes. It sees each pick with an excerpt (first 500 characters) of any article the desk read. Grounding must score 4 or more out of 5. | `jarvis_agent/evaluator.py` |
+| **Checker** | A *different* model in a fresh context scores each draft on grounded, specific, relevant, best picks and honest, with evidence, and returns exact fixes. It sees each pick with an excerpt (first 500 characters) of any article the desk read. Grounding must score 4 or more out of 5, and it also lists every factual claim: if the article doesn't support one, **code** fails the draft's grounding. | `jarvis_agent/evaluator.py` |
 | **Harness** | Plain code. Gives each desk a contract, refuses `finish` until it's met, routes failures, enforces time budgets, and runs final checks. | `jarvis_agent/harness.py` |
 | **Memory** | Links already published (no repeats for 14 days), feed addresses that worked, and one lesson per desk per day, read at the start of the next run. | `jarvis_agent/store.py` (Stratus `state/memory.json`) |
 | **Agent spec** | Reader, sections and desks in one file. A new audience or new sources is a config change, not a code change. | `jarvis.config.json` |
@@ -76,7 +76,7 @@ Every rule below is enforced in code, not by asking the model nicely.
 
 ## 3. How it was tested
 
-- **66 offline checks** (`python tests/test_agent.py`, with fake models and fake sources, run on every push together with the `ruff` linter). They cover:
+- **68 offline checks** (`python tests/test_agent.py`, with fake models and fake sources, run on every push together with the `ruff` linter). They cover:
   - a desk calling `finish` early, crashing, or stopping half done
   - every agent writer failing
   - the checker going down or returning broken JSON (this never costs the writer a draft)
@@ -88,7 +88,9 @@ Every rule below is enforced in code, not by asking the model nicely.
   - no secrets in the committed Catalyst config
   - the alert rules
   - the **Catalyst Job function end to end**, with a fake SDK and an in-memory bucket: clean run, degraded run, and crash
-- **Real runs with real models and sources**, including **fault injection** (`fault=india:writer`). In one test the India writer was crashed on purpose, both backup models then genuinely hit their quota (HTTP 429), and the original pipeline wrote the section. All final checks still passed.
+- **Real runs with real models and sources**, including **fault injection** (`fault=india:writer`). In one test the India writer was crashed on purpose, both backup models then hit their quota (HTTP 429), and the original pipeline wrote the section. All final checks still passed.
+
+- **A measured test of the checker** (`python evals/checker_eval.py`, real model calls): 20 labelled drafts, half of them with one invented detail. The first version of the checker caught **4/10**. After adding a claim-by-claim fact check that code enforces, it caught **10/10** and still passed 10/10 faithful drafts. Details and every case: [`evals/`](evals/).
 
 ## 4. How we know it works every day
 
@@ -110,9 +112,10 @@ Every rule below is enforced in code, not by asking the model nicely.
 | v4 | Spec file, Edgepedia background, per-call timing. | Make it configurable, grounded and observable. |
 | v5 (now) | Runs on Zoho Catalyst (Job function, Job Scheduling, Stratus), with alert emails. | GitHub's scheduler starts late or skips runs, and failures need to reach me. |
 
-Fixes found by reading real run logs, each covered by a test:
+Fixes found by reading real run logs and measuring, each covered by a test:
 
 - An accepted draft contained details the checker itself had flagged as invented, because grounding scored 3. **Grounding now needs 4.**
+- A labelled test showed the checker still passed 6 of 10 drafts with an invented detail. **It now fact-checks each claim, and code enforces the result: 10 of 10 caught.**
 - A draft that used up its tries could still ship with weak grounding. **It now ships only with grounding of 4 or more.**
 - The checker penalised the Global desk for "missing India news", which is the other desk's job. **It's now told which sections each desk owns.**
 - A broken reply from the checker counted against the writer. **It now falls through to the next checker model and costs no draft.**
@@ -149,7 +152,7 @@ Fixes found by reading real run logs, each covered by a test:
 
 ```
 pip install -r requirements.txt
-python tests/test_agent.py               # 66 offline checks
+python tests/test_agent.py               # 68 offline checks
 ruff check .                             # lint (settings in ruff.toml)
 copy .env.example .env                   # GEMINI_API_KEY, PRODUCT_HUNT_DEVELOPER_TOKEN
 python run.py --test-run                 # a real run (uses API quota); report saved to runs/
@@ -197,4 +200,5 @@ Environment variables:
 | `run.py` | One run: harness → publish and read back → memory → alert |
 | `scripts/build_catalyst.py` | Builds the Catalyst function folder |
 | `site/index.html` | The website and the Ask Jarvis chat |
-| `tests/test_agent.py` | The 66 offline checks |
+| `tests/test_agent.py` | The 68 offline checks |
+| `evals/` | The measured checker test: labelled cases, the script, and before/after results |
