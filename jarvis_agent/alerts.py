@@ -21,13 +21,13 @@ def classify(report_checks, trace, error):
     """Returns ('failed' | 'degraded' | 'ok', reasons)."""
     if error:
         return "failed", [f"The run stopped with an error: {error.splitlines()[-1][:300] if error else ''}"]
-    failed = [c for c in report_checks if c.get("final", True) and not c["passed"]]
+    failed = [c for c in report_checks if c.get("final", True) and not c.get("warning") and not c["passed"]]
     if failed:
         return "failed", [f"{c['check']}: {c['evidence']}" for c in failed]
-    degraded = [d for d in (trace or {}).get("desks", []) if d.get("written_by") in ("pipeline", "failed")]
-    if degraded:
-        return "degraded", [f"{d['title']}: every agent writer failed, so the old pipeline wrote this section" for d in degraded]
-    return "ok", []
+    reasons = [f"{d['title']}: every agent writer failed, so the old pipeline wrote this section"
+               for d in (trace or {}).get("desks", []) if d.get("written_by") in ("pipeline", "failed")]
+    reasons += [f"{c['check']}: {c['evidence']}" for c in report_checks if c.get("warning") and not c["passed"]]
+    return ("degraded", reasons) if reasons else ("ok", [])
 
 
 def build_message(status, reasons, report_checks, trace, error, run_id):
@@ -40,7 +40,7 @@ def build_message(status, reasons, report_checks, trace, error, run_id):
     if report_checks:
         lines += ["Full report card:"]
         for c in report_checks:
-            tag = "PASS" if c["passed"] else ("FAIL" if c.get("final", True) else "RETRIED")
+            tag = "PASS" if c["passed"] else ("WARN" if c.get("warning") else ("FAIL" if c.get("final", True) else "RETRIED"))
             lines.append(f"  {tag:7} {c['check']}")
         lines.append("")
     if trace:

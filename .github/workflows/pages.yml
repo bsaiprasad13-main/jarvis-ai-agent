@@ -6,6 +6,7 @@ name: Publish website
 on:
   push:
     branches: [main]
+  pull_request:
   workflow_dispatch:
 
 permissions:
@@ -25,12 +26,13 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: pip install -r requirements.txt ruff
+      - run: pip install -r requirements.txt ruff==0.17.6
       - run: ruff check .
       - run: python tests/test_agent.py
 
   deploy:
     needs: test
+    if: github.event_name != 'pull_request'          # pull requests are tested, never published
     runs-on: ubuntu-latest
     environment:
       name: github-pages

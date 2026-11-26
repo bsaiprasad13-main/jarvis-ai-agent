@@ -6,6 +6,7 @@ link in the digest is one Jarvis actually fetched today.
 """
 import datetime
 import html
+import inspect
 import re
 import urllib.parse
 
@@ -161,12 +162,9 @@ def _page_text(raw_html):
 
 def read_picks(state, picks):
     """Picks that count as read in full: the page was actually fetched and had text.
-    A failed read (404, paywall, empty page) does not count. One exception: if the desk has used every read it
-    is allowed and at least one pick really was read, its other attempts count too (it did all it could)."""
-    read = [i for i in picks if state.items.get(i, {}).get("article")]
-    if read and len(state.reads) >= MAX_ARTICLE_READS:
-        return [i for i in picks if i in state.reads]
-    return read
+    A failed read (404, paywall, empty page) never counts. A desk that can't read enough picks fails its
+    contract, and the harness hands the job to the next model or the fallback pipeline."""
+    return [i for i in picks if state.items.get(i, {}).get("article")]
 
 
 def read_article(state, item_id):
@@ -274,7 +272,11 @@ def submit_sections(state, notes=None, **sections):
             if left else "No drafts left. Call finish."}
 
 
-SUSPICIOUS_LESSON = re.compile(r"https?://|www\.|ignore (all |any |previous |prior )|disregard|system prompt", re.I)
+# a lesson is a note about sources or mistakes; anything that reads like an order to the model is refused
+SUSPICIOUS_LESSON = re.compile(
+    r"https?://|www\.|\bignore\b|disregard|override|bypass|from now on|system prompt|instruction|"
+    r"\b(evaluator|checker|contract|harness|rules?)\b.*\b(skip|off|disable|relax|no longer)\b|"
+    r"\b(skip|disable|relax|turn off)\b.*\b(evaluator|checker|contract|harness|rules?)\b", re.I)
 
 
 def save_lesson(state, lesson):
@@ -307,9 +309,14 @@ def dispatch(state, name, args):
         result = {"error": f"no tool named {name}"}
     else:
         try:
-            result = fn(state, **(args or {}))
+            inspect.signature(fn).bind(state, **(args or {}))
         except TypeError as e:
             result = {"error": f"bad arguments: {e}"}
+        else:
+            result = None
+        try:
+            if result is None:
+                result = fn(state, **(args or {}))
         except Exception as e:                       # a broken tool is reported to the model, not a crashed desk
             result = {"error": f"tool failed ({type(e).__name__}); try another step"}
     state.events.append({"step": state.steps, "tool": name, "args": _short(args), "result": _short(result)})

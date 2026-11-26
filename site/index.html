@@ -240,6 +240,7 @@ footer a { color: var(--muted); }
   const REPORTS_BASE = "https://jarvis-reports-66495-development.zohostratus.in/reports/";
   const $ = (id) => document.getElementById(id);
   const icon = (n) => `<svg class="i"><use href="#i-${n}"/></svg>`;
+  const safe = (u) => /^https?:\/\//i.test(String(u || ""));     // only web links become clickable (no javascript: etc.)
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
   const SECTIONS = [
     ["section_1_tools", "AI & developer tools", "tools", "tool"],
@@ -285,7 +286,7 @@ footer a { color: var(--muted); }
 
   function renderDays(active) {
     const today = days[0] && days[0].date;
-    $("days").innerHTML = days.map((d) => `<button class="day" data-date="${d.date}" aria-pressed="${d.date === active}">
+    $("days").innerHTML = days.map((d) => `<button class="day" data-date="${esc(d.date)}" aria-pressed="${d.date === active}">
       <small>${d.date === today ? "Latest" : dayLabel(d.date, { weekday: "long" })}</small>
       <b>${dayLabel(d.date, { day: "numeric", month: "short" })}</b></button>`).join("");
     $("days").querySelectorAll("button").forEach((b) => b.addEventListener("click", () => { location.hash = b.dataset.date; }));
@@ -302,11 +303,11 @@ footer a { color: var(--muted); }
       return `<section class="sec ${cls}">
         <div class="sec-head"><span class="ic">${icon(ic)}</span><h3>${title}</h3><span class="n">${rows.length} ${rows.length === 1 ? "story" : "stories"}</span></div>
         ${rows.length ? `<div class="cards">${rows.map((p) => `<article class="card">
-          ${p.link ? `<a class="t" href="${esc(p.link)}" target="_blank" rel="noopener">${esc(p.title)}${icon("out")}</a>` : `<span class="t">${esc(p.title)}</span>`}
+          ${safe(p.link) ? `<a class="t" href="${esc(p.link)}" target="_blank" rel="noopener">${esc(p.title)}${icon("out")}</a>` : `<span class="t">${esc(p.title)}</span>`}
           ${!headlinesOnly && p.why_it_matters ? `<p>${esc(p.why_it_matters)}</p>` : ""}
           <div class="meta"><span>${icon("news")}${esc(p.source || "")}</span>
             ${p.read ? `<span>${icon("book")}Read in full</span>` : ""}
-            ${p.background ? `<span>Background: <a href="${esc(p.background.url)}" target="_blank" rel="noopener">${esc(p.background.title)}</a></span>` : ""}</div>
+            ${p.background && safe(p.background.url) ? `<span>Background: <a href="${esc(p.background.url)}" target="_blank" rel="noopener">${esc(p.background.title)}</a></span>` : ""}</div>
         </article>`).join("")}</div>` : ""}
         ${msg ? `<p class="empty">${esc(msg)}</p>` : (!rows.length ? '<p class="empty">Nothing worth your time here today.</p>' : "")}
       </section>`;
@@ -322,13 +323,13 @@ footer a { color: var(--muted); }
       const who = d.written_by === "pipeline" ? "the backup pipeline" : (tries > 1 ? "the reserve agent" : "the writer agent");
       return `<div class="desk"><b>${esc(d.title)}</b>
         <span>Written by ${who}${last.model ? ` (${esc(last.model)})` : ""}</span>
-        <span>${reads} articles read in full${best ? ` · checker score ${best.score}/10` : ""}${drafts.length > 1 ? ` · ${drafts.length} drafts` : ""}</span></div>`;
+        <span>${reads} articles read in full${best ? ` · checker score ${esc(best.score)}/10` : ""}${drafts.length > 1 ? ` · ${drafts.length} drafts` : ""}</span></div>`;
     }).join("");
     const checks = t.report_card.map((c) => {
-      const cls = c.passed ? "" : (c.final === false ? "retry" : "fail");
-      const ic = c.passed ? "check" : (c.final === false ? "redo" : "x");
-      const note = !c.passed && c.final === false ? " — failed once, fixed automatically" : "";
-      return `<li class="${cls}">${icon(ic)}<span>${esc(c.check)}${note}</span></li>`;
+      const cls = c.passed ? "" : (c.warning ? "retry" : (c.final === false ? "retry" : "fail"));
+      const ic = c.passed ? "check" : (c.warning ? "x" : (c.final === false ? "redo" : "x"));
+      const note = c.passed ? "" : (c.warning ? ` — ${c.evidence}` : (c.final === false ? " — failed once, fixed automatically" : ""));
+      return `<li class="${cls}">${icon(ic)}<span>${esc(c.check + note)}</span></li>`;
     }).join("");
     return `<details><summary>${icon("shield")}How this report was checked</summary>
       <div class="proof"><div class="desks">${desks}</div><ul class="checks">${checks}</ul></div></details>`;
@@ -351,13 +352,17 @@ footer a { color: var(--muted); }
         ${sectionsHtml(rec.email, true)}`;
       return;
     }
-    const t = rec.trace, finals = t.report_card.filter((c) => c.final !== false);
+    const t = rec.trace, finals = t.report_card.filter((c) => c.final !== false && !c.warning);
+    // older reports didn't record this check: work it out from the drafts the checker accepted
+    const selfChecked = t.report_card.some((c) => c.warning && !c.passed) || t.desks.some((d) => d.written_by !== "pipeline"
+      && d.attempts.some((a) => (a.drafts || []).some((x) => x.accepted && x.independent === false)));
     const passed = finals.filter((c) => c.passed).length;
     const fixed = t.report_card.filter((c) => c.final === false && !c.passed).length;
     $("report").innerHTML = `<div class="r-head"><h2>${title}</h2>
       <div class="chips">
         <span class="chip ${passed === finals.length ? "ok" : "warn"}">${icon("shield")}${passed === finals.length ? "All checks passed" : `${passed}/${finals.length} checks passed`}</span>
         <span class="chip">${icon("news")}${count} stories</span>
+        ${selfChecked ? `<span class="chip warn">${icon("x")}Checked by the writer's own model (independent checkers were down)</span>` : ""}
         ${fixed ? `<span class="chip warn">${icon("redo")}${fixed} problem${fixed > 1 ? "s" : ""} fixed automatically</span>` : ""}
         ${timeOf(day.entry.id) ? `<span class="chip">${icon("clock")}${timeOf(day.entry.id)}</span>` : ""}
       </div></div>
@@ -433,7 +438,7 @@ footer a { color: var(--muted); }
       return { d, score };
     }).filter((x) => x.score > 0).sort((a, b) => b.score - a.score).slice(0, k).map((x) => x.d);
   }
-  const sourcesHtml = (hits, withWhy) => `<ol>${hits.map((d) => `<li>${d.link ? `<a href="${esc(d.link)}" target="_blank" rel="noopener">${esc(d.title)}</a>` : `<b>${esc(d.title)}</b>`}
+  const sourcesHtml = (hits, withWhy) => `<ol>${hits.map((d) => `<li>${safe(d.link) ? `<a href="${esc(d.link)}" target="_blank" rel="noopener">${esc(d.title)}</a>` : `<b>${esc(d.title)}</b>`}
     <span class="why">${withWhy && d.why ? esc(d.why) + " · " : ""}${esc(d.source)}, ${esc(d.when)}</span></li>`).join("")}</ol>`;
   function say(html, me) {
     const el = document.createElement("div");

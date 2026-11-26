@@ -64,7 +64,7 @@ def _content(res):
         raise GeminiError(f"no answer from model: {json.dumps(res)[:300]}")
 
 
-def ask_json(model, prompt, system=None, tries=5):
+def ask_json(model, prompt, system=None, tries=5, deadline=None):
     """One call that must return JSON. Used by the checker and the fallback pipeline.
     Temperature 0: a judge should give the same verdict for the same draft."""
     payload = {
@@ -73,7 +73,7 @@ def ask_json(model, prompt, system=None, tries=5):
     }
     if system:
         payload["systemInstruction"] = {"parts": [{"text": system}]}
-    parts = _content(_post(model, payload, tries)).get("parts", [])
+    parts = _content(_post(model, payload, tries, deadline)).get("parts", [])
     text = "".join(p.get("text", "") for p in parts).strip()
     if text.startswith("```"):
         text = text.strip("`").removeprefix("json").strip()

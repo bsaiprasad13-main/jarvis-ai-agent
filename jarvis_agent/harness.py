@@ -28,14 +28,16 @@ class ReportCard:
     def __init__(self):
         self.checks = []
 
-    def add(self, name, passed, evidence="", final=True):
-        """final=False marks an attempt the harness can still recover from (shown as RETRIED if it failed)."""
-        self.checks.append({"check": name, "passed": bool(passed), "final": final, "evidence": str(evidence)[:400]})
+    def add(self, name, passed, evidence="", final=True, warning=False):
+        """final=False marks an attempt the harness can still recover from (shown as RETRIED if it failed).
+        warning=True marks a check that doesn't stop publishing but must be shown and alerted (DEGRADED)."""
+        self.checks.append({"check": name, "passed": bool(passed), "final": final, "warning": warning,
+                            "evidence": str(evidence)[:400]})
         return passed
 
     @property
     def passed(self):
-        return all(c["passed"] for c in self.checks if c.get("final", True))
+        return all(c["passed"] for c in self.checks if c.get("final", True) and not c.get("warning"))
 
 
 def _legacy_for_desk(desk, memory, state, deadline=None):
@@ -155,6 +157,13 @@ def run(memory, log=print, deadline=None):
     report.add("Every link came from today's feeds", all(u in fetched for u in urls),
                f"{sum(u in fetched for u in urls)}/{len(urls)} links found in today's fetched stories")
     report.add("The digest has stories", len(urls) > 0, f"{len(urls)} stories")
+    reviews = [d["review"] for oc in outcomes if oc["source"] in ("writer", "reserve")
+               for d in oc["state"].drafts if d["review"].get("accepted")]
+    if reviews:
+        own = [r.get("evaluator_model") for r in reviews if not r.get("independent")]
+        report.add("Every accepted draft was checked by a different model from its writer", not own,
+                   "yes" if not own else f"the independent checkers were unavailable, so {', '.join(sorted(set(own)))} "
+                   "checked its own work", warning=True)
     if not urls:
         raise RuntimeError("no section could be produced")
 
