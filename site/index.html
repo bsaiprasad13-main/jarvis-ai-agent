@@ -389,16 +389,21 @@ td.num { font-variant-numeric: tabular-nums; font-family: var(--mono); font-size
   // ------------------------------------------------------- ask jarvis (RAG)
   const STOP = new Set("a an and are as at be by did do does for from has have how i in is it its me of on or so that the their this to was were what when where which who why will with you your about any new latest week today".split(" "));
   const stem = (w) => (w.length > 4 ? w.replace(/(ing|ed|es|s)$/, "") : w);   // raises / raised / raising -> rais
-  const words = (t) => String(t || "").toLowerCase().split(/[^a-z0-9.+#]+/).filter((w) => w.length > 1 && !STOP.has(w)).map(stem);
+  // a few words people use for the same idea map to one term
+  const SAME = { indian: "india", rais: "fund", raise: "fund", bag: "fund", net: "fund", nets: "fund", funding: "fund", fund: "fund",
+    money: "fund", investment: "fund", round: "fund", funded: "fund", tool: "tool", tools: "tool", app: "tool", launch: "launch", launche: "launch" };
+  const words = (t) => String(t || "").toLowerCase().split(/[^a-z0-9.+#]+/).filter((w) => w.length > 1 && !STOP.has(w))
+    .map(stem).map((w) => SAME[w] || w);
+  const SECTION_WORDS = { section_1_tools: "tool developer", section_2_ai_news: "ai industry news", section_3_india_news: "india startup" };
   let corpus = [], df = {}, avgLen = 1;
   function buildCorpus(recs) {
     const seen = new Map();
     recs.forEach((r) => SECTIONS.forEach(([k]) => (r.email[k] || []).forEach((p) => {
       const doc = { title: p.title, source: p.source, link: p.link, why: r.kind === "agent" ? p.why_it_matters : "",
-        background: p.background, when: when(r.id), runId: r.id };
+        background: p.background, when: when(r.id), runId: r.id, section: SECTION_WORDS[k] };
       seen.set(p.title.toLowerCase(), doc);                    // later runs win
     })));
-    corpus = [...seen.values()].map((d) => ({ ...d, toks: words(`${d.title} ${d.title} ${d.source} ${d.why} ${d.background?.title || ""}`) }));
+    corpus = [...seen.values()].map((d) => ({ ...d, toks: words(`${d.title} ${d.title} ${d.section} ${d.source} ${d.why} ${d.background?.title || ""}`) }));
     df = {};
     corpus.forEach((d) => new Set(d.toks).forEach((w) => (df[w] = (df[w] || 0) + 1)));
     avgLen = corpus.reduce((n, d) => n + d.toks.length, 0) / Math.max(1, corpus.length);
@@ -487,7 +492,7 @@ td.num { font-variant-numeric: tabular-nums; font-family: var(--mono); font-size
       $("bubble").textContent = "I couldn't answer that from my briefs with a source, so I won't guess. The closest stories are below.";
       verdict = "Check failed: the answer cited no story, so code replaced it.";
     } else {
-      $("bubble").textContent = text.replace(/\[(\d+)\]/g, (m, n) => (+n >= 1 && +n <= hits.length ? m : "")).trim();
+      $("bubble").textContent = text.replace(/\[(\d+)\]/g, (m, n) => (+n >= 1 && +n <= hits.length ? m : "")).replace(/not_in_briefs/gi, "").trim();
       verdict = `Check passed: every citation points to a story below (${valid.map((n) => "[" + n + "]").join(" ")}).`;
     }
     $("check").textContent = `${verdict} First token ${Math.round((first || performance.now()) - t0)} ms · about ${Math.round(chunks / Math.max(secs, 0.01))} tokens/s · on your device.`;
