@@ -458,7 +458,7 @@ footer a { color: var(--muted); }
       const prose = text.replace(/\[\d+\]/g, " ").replace(/not_in_reports/gi, " ").trim().split(/\s+/).filter((w) => /[a-z]/i.test(w));
       let answer, note;
       if (/not_in_reports/i.test(text) && prose.length < 6) {
-        answer = "The reports don't answer that directly. The closest stories:"; note = "The model said the reports don't cover this, so nothing was made up.";
+        answer = "The reports don't answer that directly. The closest stories:"; note = "The model said the reports don't cover this, so no answer was given.";
       } else if (prose.length < 6 || !cited.length) {
         answer = "I couldn't answer that with a source, so I won't guess. The closest stories:"; note = "Check failed: the answer cited no story, so code replaced it.";
       } else {

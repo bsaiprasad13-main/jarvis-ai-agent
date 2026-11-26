@@ -27,7 +27,7 @@ from jarvis_agent.storage import LocalStorage  # noqa: E402
 from jarvis_agent.store import Memory  # noqa: E402
 
 SECTION_KEYS = ("section_1_tools", "section_2_ai_news", "section_3_india_news")
-IST = datetime.timezone(datetime.timedelta(hours=5, minutes=30))     # run ids are India time, wherever the code runs
+IST = datetime.timezone(datetime.timedelta(hours=5, minutes=30))     # run ids are India time (the very first run, 26 Nov, was stamped in UTC; the site converts it)
 
 
 def publish_report(store, prefix, file_prefix, stamp, brief, trace, mode):

@@ -4,7 +4,7 @@
 Two AI agents research and write, a different AI model reviews their drafts, and plain code decides when the work is
 really done. Nothing reaches the website until it passes every check.
 
-[**Live site**](https://bsaiprasad13-main.github.io/jarvis-ai-agent/) · Runs on **Zoho Catalyst** (scheduled daily at 10:00 IST) · **62 offline tests** · MIT license
+[**Live site**](https://bsaiprasad13-main.github.io/jarvis-ai-agent/) · Runs on **Zoho Catalyst**, scheduled daily at 10:00 IST (live since 26 Nov 2026) · **62 offline tests** · MIT license
 
 ![The Jarvis website: today's report with its checks, and the Ask Jarvis panel](docs/site.png)
 
@@ -26,11 +26,11 @@ really done. Nothing reaches the website until it passes every check.
 | **Edge-case handling** | Early "finish", crashes, half-done work, model outages and quota limits each have a fixed route in code, and each has a test |
 | **End-to-end deployment** | Spec → prompts and tools → offline tests → test runs with fault injection → production on Zoho Catalyst → alerts and a 10:30 watchdog |
 | **Integrations** | Gemini, Product Hunt GraphQL, Hacker News API, RSS feeds, Edgepedia API, Resend email, Zoho Catalyst (Job Scheduling, Stratus), GitHub Pages |
-| **Tuning from logs and latency** | Every model call is timed and logged with its report; each fix in section 7 came from reading run traces |
+| **Tuning from logs and latency** | Every model call is timed and logged with its report; each fix in section 5 came from reading run traces |
 | **Low-latency, on-device inference** | The optional chat model runs in the browser on WebGPU and shows time to first word |
 | **UX writing** | One plain line per story, a one-page site, and alert emails that say what broke in plain English |
 
-## 3. How it works
+## 1. How it works
 
 ```
  10:00 IST  Zoho Catalyst Job Scheduling starts the Job function
@@ -63,7 +63,7 @@ really done. Nothing reaches the website until it passes every check.
 | **Agent spec** | Reader, sections and desks in one file. A new audience or new sources is a config change, not a code change. | `jarvis.config.json` |
 | **Website** | One clean page: today's report and the previous days, each with a short "How this report was checked" panel, plus the Ask Jarvis chat. | `site/index.html` (GitHub Pages; reads reports from Stratus) |
 
-## 4. Why it is reliable
+## 2. Why it is reliable
 
 Every rule below is enforced in code, not by asking the model nicely.
 
@@ -75,7 +75,7 @@ Every rule below is enforced in code, not by asking the model nicely.
 - **Nothing counts as published until it's read back.** After saving the report, the job reads it from Stratus and compares the links.
 - **Web text is data, never instructions.** Article text is labelled as information, no tool can act on it, and the website escapes all text.
 
-## 5. How it was tested
+## 3. How it was tested
 
 - **62 offline checks** (`python tests/test_agent.py`, with fake models and fake sources, run on every push). They cover:
   - a desk calling `finish` early, crashing, or stopping half done
@@ -89,7 +89,7 @@ Every rule below is enforced in code, not by asking the model nicely.
   - the **Catalyst Job function end to end**, with a fake SDK and an in-memory bucket: clean run, degraded run, and crash
 - **Real runs with real models and sources**, including **fault injection** (`fault=india:writer`). In one test the India writer was crashed on purpose, both backup models then genuinely hit their quota (HTTP 429), and the original pipeline wrote the section. All final checks still passed.
 
-## 6. How we know it works every day
+## 4. How we know it works every day
 
 - **A report card for every run**, published on the website: each check marked PASS, FAIL or RETRIED (failed, then recovered automatically), with its evidence.
 - **Alert emails, only when they matter:**
@@ -99,7 +99,7 @@ Every rule below is enforced in code, not by asking the model nicely.
 - **A watchdog at 10:30 IST** (a second cron, same function, `watchdog=1`) checks that today's report was actually published with every check passed, and emails if not. It catches the failures a run can't report itself: Catalyst not starting the job, or stopping it hard.
 - **Every model call is recorded** in the run's trace (model, response time, success, failure code), saved with the report in Stratus, so latency and failure rates can be checked per model.
 
-## 7. What changed, and what the logs taught us
+## 5. What changed, and what the logs taught us
 
 | Version | What changed | Why |
 |---|---|---|
@@ -119,7 +119,7 @@ Fixes found by reading real run logs, each covered by a test:
 - Test runs were reading production memory. **They now use their own.**
 - Two of the system's own checks were wrong (counting recovered failures as run failures, and missing HTML-escaped links). The report card exposed both.
 
-## 8. Decisions and why
+## 6. Decisions and why
 
 | Decision | Why |
 |---|---|
@@ -136,7 +136,7 @@ Fixes found by reading real run logs, each covered by a test:
 | **A simple website** | A reader should understand it in seconds: reports first, details folded away, test runs never shown. A monitoring panel was removed as noise; the numbers stay in each run's trace. |
 | **Chat behind one button, model optional** | Questions are answered from the reports by retrieval straight away. The on-device model is a ~1 GB download, so it loads only when the visitor asks for it, and nothing they type leaves the page. |
 
-## 9. Known limits
+## 7. Known limits
 
 - **One model provider.** Writers and checker are different Gemini models, so they're independent of each other's mistakes but not of a Gemini-wide outage. If every desk model fails, the original pipeline still writes the brief, on Gemini too. A second provider is the next step.
 - **The checker sees excerpts, not whole articles,** to keep each review fast and cheap.
@@ -144,16 +144,7 @@ Fixes found by reading real run logs, each covered by a test:
 - **Short history.** The agent version went live on 26 Nov 2026; the earlier days on the site come from v1 and show headlines only.
 - **Catalyst Development environment.** The job and bucket run in Catalyst's Development environment, which is enough for one scheduled job a day.
 
-## 10. Skills this project demonstrates
-
-- **Building AI agents and conversational flows:** function-calling agents with tools, contracts and edge-case handlers (early finish, crashes, half-done work, outages), and a chat that answers only from its sources.
-- **Prompt engineering and context management:** system prompts built from a spec, scoped checker prompts, a rubric with evidence, lessons carried between runs, retrieval of article text and Edgepedia background before writing, and retrieval (BM25) for the chat.
-- **End-to-end delivery:** spec, then prompts and tools, then offline tests, then staging runs with fault injection, then production on Zoho Catalyst, then alerts and a watchdog.
-- **Integrations:** Gemini, Product Hunt GraphQL, the Hacker News API, five RSS feeds with self-healing fallbacks, the Edgepedia API, Resend, Zoho Catalyst (Job Scheduling, Stratus) and GitHub Pages.
-- **Optimisation from logs:** every fix in section 7 came from reading run traces and report cards; latency and failure rates are recorded per model call.
-- **Clear writing for users:** every story gets one plain line on why it matters, and the website is a single page anyone can read.
-
-## 11. Run it yourself
+## 8. Run it yourself
 
 ```
 pip install -r requirements.txt
@@ -187,7 +178,7 @@ Environment variables:
 - **For alert emails:** `RESEND_API_KEY`, `ALERT_TO_EMAIL`, `ALERT_FROM_EMAIL`
 - **Optional model chains:** `DESK_MODEL`, `RESERVE_MODELS`, `EVALUATOR_MODELS`
 
-## 12. Files
+## 9. Files
 
 | File | What |
 |---|---|
