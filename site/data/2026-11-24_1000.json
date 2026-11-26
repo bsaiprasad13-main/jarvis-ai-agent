@@ -1,0 +1,92 @@
+{
+ "id": "2026-11-24_1000",
+ "kind": "pipeline",
+ "note": "The original Jarvis pipeline's real 10:00 email: one Gemini call over headlines, no articles read, no review. Links were not kept in the saved copy of the email, so titles are shown without them.",
+ "email": {
+  "section_1_tools": [
+   {
+    "title": "Letter Visitors",
+    "source": "Product Hunt",
+    "link": null,
+    "why_it_matters": "As an aspiring PM, understanding web traffic and user behavior is crucial for product analytics. This tool lets you see website visitors right on your site, giving you a simple way to study user engagement firsthand."
+   },
+   {
+    "title": "Motionflare",
+    "source": "Product Hunt",
+    "link": null,
+    "why_it_matters": "PMs often need to pitch ideas and create launch assets quickly without relying entirely on a design team. This tool helps you turn a website into a polished launch video in minutes, which is great for building your portfolio."
+   },
+   {
+    "title": "Gauth Personal Study Agent",
+    "source": "Product Hunt",
+    "link": null,
+    "why_it_matters": "Studying for PM interviews requires personalized prep to fix your weak spots. This AI study agent tracks where you struggle, offering a practical example of how personalized AI products solve user-specific friction."
+   },
+   {
+    "title": "Modem",
+    "source": "Product Hunt",
+    "link": null,
+    "why_it_matters": "Handling customer feedback is a core daily responsibility for any product manager. Modem helps you find, fix, and track customer concerns, giving you a taste of real-world user support and retention workflows."
+   },
+   {
+    "title": "Polylane Swarms",
+    "source": "Product Hunt",
+    "link": null,
+    "why_it_matters": "Engineering collaboration and incident management are vital parts of working with tech teams. This tool deploys AI agents to tackle production incidents, showing you how automation is changing software maintenance."
+   }
+  ],
+  "section_2_ai_news": [
+   {
+    "title": "Anthropic launches Claude Ship",
+    "source": "TechCrunch",
+    "link": null,
+    "why_it_matters": "As an engineering student moving into PM, you'll work closely with developers who ship code. This tool automates code reviews and fixes, showing how AI is changing the software development lifecycle you will manage."
+   },
+   {
+    "title": "Google Search's AI Mode",
+    "source": "TechCrunch",
+    "link": null,
+    "why_it_matters": "Cross-product integration is a massive challenge in consumer tech design. Google connecting search to Drive and Wallet gives you a great case study on building unified user experiences across different apps."
+   },
+   {
+    "title": "Amazon snaps up Decart's AI optimization tech for $7.5B",
+    "source": "TechCrunch",
+    "link": null,
+    "why_it_matters": "Infrastructure cost is a huge factor when PMs price and scope AI features. This massive acquisition shows how big tech companies are racing to optimize AI compute performance."
+   },
+   {
+    "title": "Sierra doubles valuation to $30B within six months",
+    "source": "TechCrunch",
+    "link": null,
+    "why_it_matters": "Customer experience (CX) is one of the fastest-growing areas for B2B SaaS products. Studying Sierra's rapid growth helps you understand what enterprise customers are actually willing to pay big money for."
+   }
+  ],
+  "section_3_india_news": [
+   {
+    "title": "Beyond tickets: How LightSprint.ai is building a multiplayer software factory",
+    "source": "YourStory",
+    "link": null,
+    "why_it_matters": "This directly targets how PMs, designers, and engineers can collaborate together in a modern AI-driven workspace. It gives you a glimpse into futuristic product development workflows in Indian startups."
+   },
+   {
+    "title": "Enterprise data security startup Matters.AI raises Rs 115 Cr",
+    "source": "YourStory",
+    "link": null,
+    "why_it_matters": "B2B enterprise SaaS and data security are hot sectors hiring fresh talent in India. Knowing which startups are securing major funding helps you target companies that are actively scaling and hiring."
+   },
+   {
+    "title": "Sarvam AI Defends Token Factory, Says Homegrown Models Remain Core Focus",
+    "source": "Inc42",
+    "link": null,
+    "why_it_matters": "Sarvam is a pioneer in India's LLM landscape. Following their strategy decisions helps you understand the nuances of building localized AI products for the Indian market."
+   },
+   {
+    "title": "Exclusive: Bewakoof Cofounder Prabhkiran Singh Launches AI Shopping Assistant Save8",
+    "source": "Inc42",
+    "link": null,
+    "why_it_matters": "E-commerce and conversational AI shopping assistants are booming in India. Analyzing how experienced founders build new AI wrappers over retail creates a great case study for your PM interviews."
+   }
+  ],
+  "section_notes": {}
+ }
+}

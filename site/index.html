@@ -199,7 +199,7 @@ footer { margin-top: 56px; padding-top: 18px; border-top: 1px solid var(--line);
       const rows = email[key] || [];
       const msg = notes[`section_${n + 1}_message`];
       return `<div class="dsec"><h3>${title}</h3>${rows.length ? `<div class="items">${rows.map((p) => `<article class="item">
-        <a class="t" href="${esc(p.link || "#")}" target="_blank" rel="noopener">${esc(p.title)}</a>
+        ${p.link ? `<a class="t" href="${esc(p.link)}" target="_blank" rel="noopener">${esc(p.title)}</a>` : `<span class="t" style="font-weight:600">${esc(p.title)}</span>`}
         <div class="src">${esc(p.source || "")}${p.read ? '<span class="badge">read in full</span>' : ""}</div>
         <p>${esc(p.why_it_matters)}</p></article>`).join("")}</div>` : ""}${msg ? `<p class="note">${esc(msg)}</p>` : (!rows.length ? '<p class="note">Nothing in this section.</p>' : "")}</div>`;
     }).join("")}</div>`;

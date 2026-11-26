@@ -1,5 +1,26 @@
 [
  {
+  "id": "2026-11-24_1000",
+  "kind": "pipeline",
+  "mode": "production email",
+  "file": "data/2026-11-24_1000.json",
+  "stories": 13
+ },
+ {
+  "id": "2026-11-25_1000",
+  "kind": "pipeline",
+  "mode": "production email",
+  "file": "data/2026-11-25_1000.json",
+  "stories": 15
+ },
+ {
+  "id": "2026-11-26_1000",
+  "kind": "pipeline",
+  "mode": "production email",
+  "file": "data/2026-11-26_1000.json",
+  "stories": 12
+ },
+ {
   "id": "2026-11-26_1318",
   "kind": "agent",
   "mode": "daily",
