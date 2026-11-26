@@ -283,6 +283,12 @@ rv = evaluator.review(gs, {"india_news": [{"item_id": "i1", "title": "x", "why_i
 check("grounding below 4 fails the draft even with a high average", rv["score"] >= 8 and not rv["accepted"])
 gemini.ask_json = real
 
+check("evaluator is told which sections the desk owns", "owns ONLY these sections: india_news" in evaluator._prompt(gs, {"india_news": [], "notes": {}}))
+lim = tools.RunState(new_memory(), evaluator.review, INDIA, model=DESK_MODEL)
+weak = {"digest": {"india_news": []}, "read_ids": [], "review": {"rule_errors": [], "score": 8, "rubric": {"grounded": {"score": 3}}}}
+lim.drafts = [weak, weak, weak]
+check("at the draft limit, a draft with weak grounding is not shipped", lim.final_digest() is None)
+
 # --- 8b. evaluator returns broken JSON -> next evaluator; total outage costs no draft
 calls_before = len(EVAL_CALLS)
 real_fake = gemini.ask_json

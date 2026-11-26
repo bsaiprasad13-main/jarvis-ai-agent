@@ -39,15 +39,5 @@
   "checks_passed": 9,
   "checks": 9,
   "recoveries": 3
- },
- {
-  "id": "2026-11-26_1934",
-  "kind": "agent",
-  "mode": "daily",
-  "file": "data/2026-11-26_1934.json",
-  "stories": 4,
-  "checks_passed": 8,
-  "checks": 8,
-  "recoveries": 0
  }
 ]

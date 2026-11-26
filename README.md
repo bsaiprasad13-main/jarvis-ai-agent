@@ -57,7 +57,7 @@ Every model call is timed and saved with the run. The website computes, across r
 | Stage | How |
 |---|---|
 | Spec | `jarvis.config.json`: reader, sections, desks |
-| Tests | `python tests/test_agent.py`: 38 offline checks (fake models and sources), run in CI before every daily run |
+| Tests | `python tests/test_agent.py`: 41 offline checks (fake models and sources), run in CI before every daily run |
 | Staging | `python run.py --dry-run`: real models and sources, separate test memory, email saved not sent |
 | Fault test | `JARVIS_FAULT=india:writer python run.py --dry-run`: crash a writer on purpose and watch the recovery |
 | Production | GitHub Actions daily at 10:00 IST: `python run.py --no-email`, publishes to the website |

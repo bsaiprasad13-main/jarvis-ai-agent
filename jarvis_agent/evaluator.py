@@ -93,8 +93,10 @@ def _unused(state, digest, limit=20):
 def _prompt(state, digest):
     failed = [n for n, s in state.sources.items() if not s["ok"]]
     dims = "\n".join(f'- "{k}": {v}' for k, v in RUBRIC.items())
+    owned = ", ".join(state.desk.sections)
     return f"""You are a strict, independent evaluator. A writer drafted part of a daily email digest for {READER}.
-You did not write it. Judge it against this rubric, scoring each dimension 1-5 (5 = excellent, 3 = acceptable,
+You did not write it. This writer is the {state.desk.title} and owns ONLY these sections: {owned}. Other sections
+are written by another desk, so never penalize their absence; judge only what this desk is responsible for. Judge it against this rubric, scoring each dimension 1-5 (5 = excellent, 3 = acceptable,
 1 = poor). Be demanding: most first drafts land at 3 on at least one dimension. Cite evidence for each score.
 {dims}
 Failed sources today: {failed or "none"}.

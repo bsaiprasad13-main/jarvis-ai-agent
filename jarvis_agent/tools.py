@@ -70,7 +70,9 @@ class RunState:
         """The accepted draft, or at the draft limit the best one that broke no rules."""
         if self.accepted:
             return self.accepted
-        ok = [d for d in self.drafts if not d["review"]["rule_errors"]]
+        # at the draft limit, ship the best draft only if it broke no rule and its grounding passed
+        ok = [d for d in self.drafts if not d["review"]["rule_errors"]
+              and (d["review"].get("rubric", {}).get("grounded", {}).get("score", 0) >= 4)]
         best = max(ok, key=lambda d: d["review"]["score"], default=None)
         return best["digest"] if best and len(self.drafts) >= MAX_DRAFTS else None
 
